@@ -1,11 +1,24 @@
-import { eq } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import {
+  InsertUser,
+  users,
+  providers,
+  agentRegistrations,
+  transactions,
+  providerFloats,
+  commissionStructures,
+  employees,
+  alertConfigurations,
+  alertHistory,
+  transactionFlags,
+  dailySettlements,
+  csvImports,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -56,8 +69,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.role = user.role;
       updateSet.role = user.role;
     } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
+      values.role = "admin";
+      updateSet.role = "admin";
     }
 
     if (!values.lastSignedIn) {
@@ -84,9 +97,196 @@ export async function getUserByOpenId(openId: string) {
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.openId, openId))
+    .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Provider queries
+export async function getAllProviders() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(providers).where(eq(providers.isActive, true));
+}
+
+export async function getProviderById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(providers).where(eq(providers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getProviderByName(name: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(providers).where(eq(providers.name, name)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// Employee queries
+export async function getEmployeeByCode(code: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(employees)
+    .where(eq(employees.uniqueCode, code))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getAllEmployees() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(employees).where(eq(employees.status, "active"));
+}
+
+// Transaction queries
+export async function getTransactionsByProvider(providerId: number, limit = 100, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.providerId, providerId))
+    .orderBy(desc(transactions.transactionTime))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getTransactionsByEmployee(employeeCode: string, limit = 100, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.employeeCode, employeeCode))
+    .orderBy(desc(transactions.transactionTime))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getTransactionsByDateRange(startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        gte(transactions.transactionTime, startDate),
+        lte(transactions.transactionTime, endDate)
+      )
+    )
+    .orderBy(desc(transactions.transactionTime));
+}
+
+export async function getUnreconciledTransactions(providerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(transactions.reconciliationStatus, "unreconciled")];
+  if (providerId) {
+    conditions.push(eq(transactions.providerId, providerId));
+  }
+  return await db.select().from(transactions).where(and(...conditions));
+}
+
+// Float queries
+export async function getProviderFloats(providerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(providerFloats).where(eq(providerFloats.providerId, providerId));
+}
+
+export async function getTotalFloatBalance() {
+  const db = await getDb();
+  if (!db) return "0";
+  const result = await db
+    .select({ total: providerFloats.currentBalance })
+    .from(providerFloats);
+  const total = result.reduce((sum, row) => {
+    const balance = typeof row.total === "string" ? parseFloat(row.total) : (row.total as number);
+    return sum + balance;
+  }, 0);
+  return total.toString();
+}
+
+// Commission queries
+export async function getCommissionStructures(providerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(commissionStructures)
+    .where(and(eq(commissionStructures.providerId, providerId), eq(commissionStructures.isActive, true)));
+}
+
+// Alert queries
+export async function getAlertConfigurations(alertType?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(alertConfigurations.isActive, true)];
+  if (alertType) {
+    conditions.push(eq(alertConfigurations.alertType, alertType as any));
+  }
+  return await db.select().from(alertConfigurations).where(and(...conditions));
+}
+
+export async function getAlertHistory(limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(alertHistory)
+    .orderBy(desc(alertHistory.triggeredAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+// Transaction flags queries
+export async function getFlaggedTransactions(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (status) {
+    conditions.push(eq(transactionFlags.status, status as any));
+  }
+  return await db
+    .select()
+    .from(transactionFlags)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(transactionFlags.createdAt));
+}
+
+// Settlement queries
+export async function getDailySettlement(providerId: number, date: Date) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(dailySettlements)
+    .where(
+      and(
+        eq(dailySettlements.providerId, providerId),
+        eq(dailySettlements.settlementDate, date)
+      )
+    )
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// CSV Import queries
+export async function getCsvImportHistory(providerId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(csvImports)
+    .where(eq(csvImports.providerId, providerId))
+    .orderBy(desc(csvImports.createdAt))
+    .limit(limit);
+}
