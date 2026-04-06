@@ -8,6 +8,8 @@ import Floats from "@/pages/Floats";
 import Alerts from "@/pages/Alerts";
 import Commissions from "@/pages/Commissions";
 import CSVImport from "@/pages/CSVImport";
+import Reports from "@/pages/Reports";
+import ProviderConfig from "@/pages/ProviderConfig";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -22,6 +24,8 @@ function Router() {
       <Route path={"/alerts"} component={Alerts} />
       <Route path={"/commissions"} component={Commissions} />
       <Route path={"/csv-import"} component={CSVImport} />
+      <Route path={"/reports"} component={Reports} />
+      <Route path={"/provider-config"} component={ProviderConfig} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
