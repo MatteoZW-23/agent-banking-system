@@ -39,6 +39,9 @@ export interface ProviderCredentials {
   refreshToken?: string;
   agentCode?: string;
   merchantId?: string;
+  certPath?: string;
+  keyPath?: string;
+  caPath?: string;
 }
 
 export abstract class ProviderAdapter {

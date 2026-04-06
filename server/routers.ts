@@ -6,6 +6,7 @@ import { transactionAnalysisService } from "./services/transactionAnalysis";
 import { alertService } from "./services/alertService";
 import { commissionService } from "./services/commissionService";
 import { csvImportService } from "./services/csvImport";
+import { TransactionOrchestrator } from "./services/transactionOrchestrator";
 import { systemRouter } from "./_core/systemRouter";
 
 export const appRouter = router({
@@ -263,6 +264,27 @@ export const appRouter = router({
         if (!provider) throw new Error("Provider not found");
         return csvImportService.generateCSVTemplate(provider.name);
       }),
+  }),
+
+  // Transaction Orchestration
+  orchestration: router({
+    fetchFromAllProviders: protectedProcedure
+      .input(z.object({ fromDate: z.date(), toDate: z.date() }))
+      .mutation(async ({ input }) => {
+        return await TransactionOrchestrator.fetchFromAllProviders(input.fromDate, input.toDate);
+      }),
+
+    fetchFromProvider: protectedProcedure
+      .input(z.object({ providerId: z.number(), fromDate: z.date(), toDate: z.date() }))
+      .mutation(async ({ input }) => {
+        const provider = await getProviderById(input.providerId);
+        if (!provider) throw new Error("Provider not found");
+        return await TransactionOrchestrator.fetchFromProvider(input.providerId, provider.name, input.fromDate, input.toDate);
+      }),
+
+    getSyncStatus: protectedProcedure.query(async () => {
+      return await TransactionOrchestrator.getSyncStatus();
+    }),
   }),
 });
 
