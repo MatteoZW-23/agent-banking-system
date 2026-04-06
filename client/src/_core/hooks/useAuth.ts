@@ -9,8 +9,9 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
+  const redirectOnUnauthenticated =
+    options?.redirectOnUnauthenticated ?? false;
+  const redirectPath = options?.redirectPath ?? getLoginUrl();
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -41,11 +42,14 @@ export function useAuth(options?: UseAuthOptions) {
     }
   }, [logoutMutation, utils]);
 
-  const state = useMemo(() => {
+  useEffect(() => {
     localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
+      "agent-banking-user-info",
+      JSON.stringify(meQuery.data ?? null)
     );
+  }, [meQuery.data]);
+
+  const state = useMemo(() => {
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
@@ -65,9 +69,10 @@ export function useAuth(options?: UseAuthOptions) {
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
+    if (!redirectPath) return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,

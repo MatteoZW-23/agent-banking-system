@@ -1,3 +1,4 @@
+import "./server/_core/loadEnv";
 import { defineConfig } from "drizzle-kit";
 
 const connectionString = process.env.DATABASE_URL;

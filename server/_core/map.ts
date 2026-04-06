@@ -1,5 +1,5 @@
 /**
- * Google Maps API Integration for Manus WebDev Templates
+ * Google Maps API integration helpers for the application service gateway.
  * 
  * Main function: makeRequest<T>(endpoint, params) - Makes authenticated requests to Google Maps APIs
  * All credentials are automatically injected. Array parameters use | as separator.
@@ -19,12 +19,12 @@ type MapsConfig = {
 };
 
 function getMapsConfig(): MapsConfig {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
+  const baseUrl = ENV.serviceBaseUrl;
+  const apiKey = ENV.serviceApiKey;
 
   if (!baseUrl || !apiKey) {
     throw new Error(
-      "Google Maps proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
+      "Google Maps proxy credentials missing: set SERVICE_BASE_URL and SERVICE_API_KEY"
     );
   }
 

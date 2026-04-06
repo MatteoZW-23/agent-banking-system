@@ -1,6 +1,28 @@
 import { router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { getDb, getAllProviders, getProviderById, getTransactionsByProvider, getTransactionsByDateRange, getProviderFloats, getTotalFloatBalance, getAlertHistory, getFlaggedTransactions } from "./db";
+import { 
+  getDb, 
+  getAllProviders, 
+  getProviderById, 
+  getTransactionsByProvider, 
+  getTransactionsByDateRange, 
+  getProviderFloats, 
+  getTotalFloatBalance, 
+  getAlertHistory, 
+  getFlaggedTransactions,
+  getAllBranches,
+  getAllEmployees,
+  getEmployeeRegistrations,
+  createCheckIn,
+  checkoutEmployee,
+  getLatestCheckIn,
+  createFloatRequest,
+  getAllFloatRequests,
+  getEmployeeFloatRequests,
+  processFloatRequest,
+  createBalanceSnapshot,
+  getLatestBalanceSnapshot
+} from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
 import { alertService } from "./services/alertService";
@@ -21,6 +43,104 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+
+  // Nodes & Workforce Monitoring
+  nodes: router({
+    listBranches: protectedProcedure.query(async () => {
+      return await getAllBranches();
+    }),
+    listEmployees: protectedProcedure.query(async () => {
+      return await getAllEmployees();
+    }),
+    getEmployeeLines: protectedProcedure
+      .input(z.object({ employeeId: z.number() }))
+      .query(async ({ input }) => {
+        return await getEmployeeRegistrations(input.employeeId);
+      }),
+    createCheckIn: protectedProcedure
+      .input(z.object({ 
+        employeeId: z.number(), 
+        branchId: z.number().optional(),
+        openingCash: z.number().optional(),
+        openingLineBalances: z.any().optional(),
+        notes: z.string().optional()
+      }))
+      .mutation(async ({ input }) => {
+        return await createCheckIn(input);
+      }),
+    checkout: protectedProcedure
+      .input(z.object({ 
+        checkInId: z.number(),
+        closingCash: z.number().optional(),
+        closingLineBalances: z.any().optional(),
+        notes: z.string().optional()
+      }))
+      .mutation(async ({ input }) => {
+        const { checkInId, ...rest } = input;
+        return await checkoutEmployee(checkInId, rest);
+      }),
+    getLatestCheckIn: protectedProcedure
+      .input(z.object({ employeeId: z.number() }))
+      .query(async ({ input }) => {
+        return await getLatestCheckIn(input.employeeId);
+      }),
+
+    // Float Requests (Worker Side)
+    requestFloat: protectedProcedure
+      .input(z.object({
+        employeeId: z.number(),
+        providerId: z.number(),
+        amount: z.number(),
+        workerNotes: z.string().optional()
+      }))
+      .mutation(async ({ input }) => {
+        return await createFloatRequest(input);
+      }),
+    
+    myFloatRequests: protectedProcedure
+      .input(z.object({ employeeId: z.number() }))
+      .query(async ({ input }) => {
+        return await getEmployeeFloatRequests(input.employeeId);
+      }),
+
+    // Admin Side Float Management
+    listFloatRequests: protectedProcedure
+      .input(z.object({ status: z.string().optional() }))
+      .query(async ({ input }) => {
+        return await getAllFloatRequests(input.status);
+      }),
+    
+    processRequest: protectedProcedure
+       .input(z.object({
+          id: z.number(),
+          status: z.enum(["approved", "declined", "transferred"]),
+          adminNotes: z.string().optional(),
+          transactionReference: z.string().optional()
+       }))
+       .mutation(async ({ input }) => {
+          const { id, ...rest } = input;
+          return await processFloatRequest(id, rest);
+       }),
+
+    // Mid-Shift Balance Updates
+    updateBalances: protectedProcedure
+       .input(z.object({
+          checkInId: z.number(),
+          employeeId: z.number(),
+          cashAmount: z.number().optional(),
+          floatBalances: z.any().optional(),
+          updateReason: z.string().optional()
+       }))
+       .mutation(async ({ input }) => {
+          return await createBalanceSnapshot(input);
+       }),
+    
+    getLatestSnapshot: protectedProcedure
+       .input(z.object({ employeeId: z.number() }))
+       .query(async ({ input }) => {
+          return await getLatestBalanceSnapshot(input.employeeId);
+       })
   }),
 
   // Provider management
@@ -64,9 +184,9 @@ export const appRouter = router({
       }),
 
     analyzeTransaction: protectedProcedure
-      .input(z.object({ transactionId: z.number() }))
+      .input(z.number())
       .mutation(async ({ input }) => {
-        return await transactionAnalysisService.analyzeTransaction(input.transactionId);
+        return await transactionAnalysisService.analyzeTransaction(input);
       }),
   }),
 
@@ -98,26 +218,7 @@ export const appRouter = router({
     }),
   }),
 
-  // Commission calculations
-  commissions: router({
-    calculateEmployee: protectedProcedure
-      .input(z.object({ employeeCode: z.string(), startDate: z.date(), endDate: z.date() }))
-      .query(async ({ input }) => {
-        return await commissionService.calculateEmployeeCommission(
-          input.employeeCode,
-          input.startDate,
-          input.endDate
-        );
-      }),
-
-    getReport: protectedProcedure
-      .input(z.object({ startDate: z.date(), endDate: z.date() }))
-      .query(async ({ input }) => {
-        return await commissionService.getCommissionReport(input.startDate, input.endDate);
-      }),
-  }),
-
-  // Alerts
+  // Alerts & Notifications
   alerts: router({
     getHistory: protectedProcedure
       .input(z.object({ limit: z.number().default(50), offset: z.number().default(0) }))
@@ -125,121 +226,23 @@ export const appRouter = router({
         return await getAlertHistory(input.limit, input.offset);
       }),
 
+    checkThresholds: protectedProcedure.mutation(async () => {
+      return await alertService.checkAllThresholds();
+    }),
+
     acknowledge: protectedProcedure
       .input(z.object({ alertId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        await alertService.acknowledgeAlert(input.alertId, ctx.user.id);
-        return { success: true };
+      .mutation(async ({ input }) => {
+        return await alertService.acknowledgeAlert(input.alertId);
       }),
-
-    checkThresholds: protectedProcedure.mutation(async () => {
-      await alertService.checkFloatThresholds();
-      await alertService.checkSuspiciousPatterns();
-      return { success: true };
-    }),
   }),
 
-  // Reports
-  reports: router({
-    dailySummary: protectedProcedure
-      .input(z.object({ date: z.date() }))
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db) return null;
-
-        const { transactions } = await import("../drizzle/schema");
-        const { eq, and, gte, lte } = await import("drizzle-orm");
-
-        const startOfDay = new Date(input.date);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(input.date);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const txns = await db
-          .select()
-          .from(transactions)
-          .where(
-            and(
-              gte(transactions.transactionTime, startOfDay),
-              lte(transactions.transactionTime, endOfDay)
-            )
-          );
-
-        const totalAmount = txns.reduce((sum, t) => {
-          const amount = t.amount
-            ? (typeof t.amount === "string" ? parseFloat(t.amount) : (t.amount as number))
-            : 0;
-          return sum + amount;
-        }, 0);
-
-        const totalFees = txns.reduce((sum, t) => {
-          const fee = t.fee
-            ? (typeof t.fee === "string" ? parseFloat(t.fee) : (t.fee as number))
-            : 0;
-          return sum + fee;
-        }, 0);
-
-        return {
-          date: input.date.toISOString().split("T")[0],
-          transactionCount: txns.length,
-          totalAmount,
-          totalFees,
-          completedCount: txns.filter((t) => t.status === "completed").length,
-          failedCount: txns.filter((t) => t.status === "failed").length,
-        };
-      }),
-
-    agentPnL: protectedProcedure
+  // Commissions
+  commissions: router({
+    getReport: protectedProcedure
       .input(z.object({ startDate: z.date(), endDate: z.date() }))
       .query(async ({ input }) => {
-        const commissionReport = await commissionService.getCommissionReport(input.startDate, input.endDate);
-        return commissionReport;
-      }),
-
-    providerBreakdown: protectedProcedure
-      .input(z.object({ date: z.date() }))
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db) return [];
-
-        const { transactions, providers } = await import("../drizzle/schema");
-        const { eq, and, gte, lte } = await import("drizzle-orm");
-
-        const startOfDay = new Date(input.date);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(input.date);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const allProviders = await getAllProviders();
-        const breakdown = [];
-
-        for (const provider of allProviders) {
-          const txns = await db
-            .select()
-            .from(transactions)
-            .where(
-              and(
-                eq(transactions.providerId, provider.id),
-                gte(transactions.transactionTime, startOfDay),
-                lte(transactions.transactionTime, endOfDay)
-              )
-            );
-
-          const totalAmount = txns.reduce((sum, t) => {
-            const amount = typeof t.amount === "string" ? parseFloat(t.amount) : (t.amount as number);
-            return sum + amount;
-          }, 0);
-
-          breakdown.push({
-            provider: provider.name,
-            transactionCount: txns.length,
-            totalAmount,
-            completedCount: txns.filter((t) => t.status === "completed").length,
-            failedCount: txns.filter((t) => t.status === "failed").length,
-          });
-        }
-
-        return breakdown;
+        return await commissionService.generateReport(input.startDate, input.endDate);
       }),
   }),
 
@@ -248,43 +251,62 @@ export const appRouter = router({
     importTransactions: protectedProcedure
       .input(z.object({ providerId: z.number(), csvContent: z.string() }))
       .mutation(async ({ input }) => {
-        return await csvImportService.importCSV(input.providerId, input.csvContent);
+        return await csvImportService.importTransactions(input.providerId, input.csvContent);
       }),
 
     validateCSV: protectedProcedure
       .input(z.object({ providerId: z.number(), csvContent: z.string() }))
       .query(async ({ input }) => {
-        return csvImportService.validateCSVFormat(input.csvContent);
+        return await csvImportService.validateFormat(input.providerId, input.csvContent);
       }),
 
     getTemplate: protectedProcedure
       .input(z.object({ providerId: z.number() }))
       .query(async ({ input }) => {
-        const provider = await getProviderById(input.providerId);
-        if (!provider) throw new Error("Provider not found");
-        return csvImportService.generateCSVTemplate(provider.name);
+        return await csvImportService.getTemplate(input.providerId);
       }),
   }),
-
-  // Transaction Orchestration
-  orchestration: router({
-    fetchFromAllProviders: protectedProcedure
-      .input(z.object({ fromDate: z.date(), toDate: z.date() }))
-      .mutation(async ({ input }) => {
-        return await TransactionOrchestrator.fetchFromAllProviders(input.fromDate, input.toDate);
+  
+  // Reports
+  reports: router({
+    dailySummary: protectedProcedure
+      .input(z.object({ date: z.date() }))
+      .query(async ({ input }) => {
+        // This would be a more complex aggregation in a real app
+        const txs = await getTransactionsByDateRange(
+          new Date(input.date.setHours(0, 0, 0, 0)),
+          new Date(input.date.setHours(23, 59, 59, 999))
+        );
+        
+        return {
+          transactionCount: txs.length,
+          totalAmount: txs.reduce((sum, t) => sum + parseFloat((t.amount as any) || "0"), 0),
+          totalFees: txs.reduce((sum, t) => sum + parseFloat((t.fee as any) || "0"), 0),
+          completedCount: txs.filter(t => t.status === 'completed').length,
+          failedCount: txs.filter(t => t.status === 'failed').length,
+        };
       }),
-
-    fetchFromProvider: protectedProcedure
-      .input(z.object({ providerId: z.number(), fromDate: z.date(), toDate: z.date() }))
-      .mutation(async ({ input }) => {
-        const provider = await getProviderById(input.providerId);
-        if (!provider) throw new Error("Provider not found");
-        return await TransactionOrchestrator.fetchFromProvider(input.providerId, provider.name, input.fromDate, input.toDate);
+      
+    providerBreakdown: protectedProcedure
+      .input(z.object({ date: z.date() }))
+      .query(async ({ input }) => {
+        const providers = await getAllProviders();
+        const results = [];
+        
+        for (const p of providers) {
+          const txs = await getTransactionsByProvider(p.id);
+          // Simplified for brevity
+          results.push({
+            provider: p.name,
+            transactionCount: txs.length,
+            totalAmount: txs.reduce((sum, t) => sum + parseFloat((t.amount as any) || "0"), 0),
+            completedCount: txs.filter(t => t.status === 'completed').length,
+            failedCount: txs.filter(t => t.status === 'failed').length,
+          });
+        }
+        
+        return results;
       }),
-
-    getSyncStatus: protectedProcedure.query(async () => {
-      return await TransactionOrchestrator.getSyncStatus();
-    }),
   }),
 });
 

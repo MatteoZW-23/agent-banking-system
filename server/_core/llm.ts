@@ -209,14 +209,22 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const resolveApiUrl = () => {
+  if (!ENV.serviceBaseUrl || ENV.serviceBaseUrl.trim().length === 0) {
+    throw new Error("SERVICE_BASE_URL is not configured");
+  }
+
+  return new URL(
+    "v1/chat/completions",
+    ENV.serviceBaseUrl.endsWith("/")
+      ? ENV.serviceBaseUrl
+      : `${ENV.serviceBaseUrl}/`
+  ).toString();
+};
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!ENV.serviceApiKey) {
+    throw new Error("SERVICE_API_KEY is not configured");
   }
 };
 
@@ -316,7 +324,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${ENV.serviceApiKey}`,
     },
     body: JSON.stringify(payload),
   });

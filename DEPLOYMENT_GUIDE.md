@@ -14,7 +14,7 @@
 
 Gather the following before deployment:
 
-1. **Manus OAuth Credentials**
+1. **OAuth Credentials**
    - Application ID
    - OAuth server URL
    - JWT secret
@@ -59,21 +59,21 @@ Create `.env.local` file with required variables:
 # Database
 DATABASE_URL=mysql://user:password@localhost:3306/agent_banking
 
-# Manus OAuth
-VITE_APP_ID=your-app-id
-OAUTH_SERVER_URL=https://api.manus.im
+# OAuth
+VITE_AUTH_CLIENT_ID=your-client-id
+AUTH_SERVER_URL=https://auth.example.com
 JWT_SECRET=your-jwt-secret-key
 
-# Manus APIs
-BUILT_IN_FORGE_API_URL=https://api.manus.im
-BUILT_IN_FORGE_API_KEY=your-api-key
+# Service Gateway
+SERVICE_BASE_URL=https://api.example.com
+SERVICE_API_KEY=your-api-key
 
 # Owner Information
 OWNER_OPEN_ID=your-open-id
 OWNER_NAME=Your Name
 
 # Analytics (optional)
-VITE_ANALYTICS_ENDPOINT=https://analytics.manus.im
+VITE_ANALYTICS_ENDPOINT=https://analytics.example.com
 VITE_ANALYTICS_WEBSITE_ID=your-website-id
 ```
 
