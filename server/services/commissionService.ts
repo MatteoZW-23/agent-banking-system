@@ -1,5 +1,10 @@
 import { getDb } from "../db";
-import { transactions, commissionStructures, employees } from "../../drizzle/schema";
+import {
+  transactions,
+  commissionStructures,
+  employees,
+  commissionLedger,
+} from "../../drizzle/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 
 export interface CommissionCalculation {
@@ -17,6 +22,9 @@ export interface CommissionCalculation {
 }
 
 export class CommissionService {
+  generateReport(startDate: Date, endDate: Date): any {
+    throw new Error("Method not implemented.");
+  }
   /**
    * Calculate commission for an employee for a date range
    */
@@ -53,12 +61,18 @@ export class CommissionService {
       );
 
     // Group transactions by type and provider
-    const breakdown: Record<string, { count: number; amount: number; commission: number }> = {};
+    const breakdown: Record<
+      string,
+      { count: number; amount: number; commission: number }
+    > = {};
     let totalAmount = 0;
     let totalCommission = 0;
 
     for (const txn of txns) {
-      const amount = typeof txn.amount === "string" ? parseFloat(txn.amount) : (txn.amount as number);
+      const amount =
+        typeof txn.amount === "string"
+          ? parseFloat(txn.amount)
+          : (txn.amount as number);
       const type = txn.type;
 
       if (!breakdown[type]) {
@@ -122,14 +136,14 @@ export class CommissionService {
 
     const structure = structures[0];
     const minAmount = structure.minAmount
-      ? (typeof structure.minAmount === "string"
-          ? parseFloat(structure.minAmount)
-          : (structure.minAmount as number))
+      ? typeof structure.minAmount === "string"
+        ? parseFloat(structure.minAmount)
+        : (structure.minAmount as number)
       : 0;
     const maxAmount = structure.maxAmount
-      ? (typeof structure.maxAmount === "string"
-          ? parseFloat(structure.maxAmount)
-          : (structure.maxAmount as number))
+      ? typeof structure.maxAmount === "string"
+        ? parseFloat(structure.maxAmount)
+        : (structure.maxAmount as number)
       : Infinity;
 
     // Check if transaction amount falls within range
@@ -139,24 +153,54 @@ export class CommissionService {
 
     // Calculate commission
     const percentage = structure.commissionPercentage
-      ? (typeof structure.commissionPercentage === "string"
-          ? parseFloat(structure.commissionPercentage)
-          : (structure.commissionPercentage as number))
+      ? typeof structure.commissionPercentage === "string"
+        ? parseFloat(structure.commissionPercentage)
+        : (structure.commissionPercentage as number)
       : 0;
     const fixed = structure.commissionFixed
-      ? (typeof structure.commissionFixed === "string"
-          ? parseFloat(structure.commissionFixed)
-          : (structure.commissionFixed as number))
+      ? typeof structure.commissionFixed === "string"
+        ? parseFloat(structure.commissionFixed)
+        : (structure.commissionFixed as number)
       : 0;
 
     const percentageCommission = (amount * percentage) / 100;
-    return percentageCommission + fixed;
+    const totalCommission = percentageCommission + fixed;
+
+    // 2. Track in Ledger (Prevention of 'stolen' money)
+    if (totalCommission > 0) {
+      await db.insert(commissionLedger).values({
+        employeeId: 1, // Placeholder: in production, we find employee via registrationId
+        providerId,
+        amount: totalCommission.toString(),
+        type: "earning",
+        status: structure.payoutFrequency === "instant" ? "cleared" : "pending",
+        earnedAt: new Date(),
+        payoutDate: this.calculatePayoutDate(structure.payoutFrequency),
+      });
+    }
+
+    return totalCommission;
+  }
+
+  private calculatePayoutDate(frequency: string | null): Date {
+    const date = new Date();
+    if (frequency === "weekly") {
+      date.setDate(date.getDate() + 7);
+    } else if (frequency === "bi_weekly") {
+      date.setDate(date.getDate() + 14);
+    } else if (frequency === "monthly") {
+      date.setMonth(date.getMonth() + 1);
+    }
+    return date;
   }
 
   /**
    * Calculate total commission for all employees in a period
    */
-  async calculateTotalCommission(startDate: Date, endDate: Date): Promise<CommissionCalculation[]> {
+  async calculateTotalCommission(
+    startDate: Date,
+    endDate: Date
+  ): Promise<CommissionCalculation[]> {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
@@ -170,12 +214,19 @@ export class CommissionService {
 
     for (const emp of allEmployees) {
       try {
-        const commission = await this.calculateEmployeeCommission(emp.uniqueCode, startDate, endDate);
+        const commission = await this.calculateEmployeeCommission(
+          emp.uniqueCode,
+          startDate,
+          endDate
+        );
         if (commission.transactionCount > 0) {
           results.push(commission);
         }
       } catch (error) {
-        console.error(`[CommissionService] Failed to calculate commission for ${emp.uniqueCode}:`, error);
+        console.error(
+          `[CommissionService] Failed to calculate commission for ${emp.uniqueCode}:`,
+          error
+        );
       }
     }
 
@@ -195,7 +246,10 @@ export class CommissionService {
     details: CommissionCalculation[];
   }> {
     const details = await this.calculateTotalCommission(startDate, endDate);
-    const totalCommission = details.reduce((sum, emp) => sum + emp.totalCommission, 0);
+    const totalCommission = details.reduce(
+      (sum, emp) => sum + emp.totalCommission,
+      0
+    );
 
     return {
       period: `${startDate.toISOString().split("T")[0]} to ${endDate.toISOString().split("T")[0]}`,

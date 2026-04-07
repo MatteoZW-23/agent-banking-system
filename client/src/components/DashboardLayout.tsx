@@ -21,10 +21,27 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  LogOut, 
+  PanelLeft, 
+  ArrowLeftRight, 
+  ClipboardCheck, 
+  Wallet, 
+  Bell, 
+  BadgePercent, 
+  FileUp, 
+  FileChartLine, 
+  Settings, 
+  MessageSquareShare,
+  ShieldCheck,
+  Building2,
+  Users2,
+  Linkedin
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -36,6 +53,8 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
+
+import { FloatingAIAssistant } from "./FloatingAIAssistant";
 
 export default function DashboardLayout({
   children,
@@ -53,7 +72,7 @@ export default function DashboardLayout({
   }, [sidebarWidth]);
 
   if (loading) {
-    return <DashboardLayoutSkeleton />
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user) {
@@ -188,7 +207,11 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-11 rounded-xl transition-all duration-200 ${
+                        isActive 
+                        ? "bg-slate-100 dark:bg-slate-800 text-primary font-semibold shadow-sm" 
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                      }`}
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
@@ -220,7 +243,7 @@ function DashboardLayoutContent({
                   </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56 glass-card rounded-xl p-1.5 shadow-2xl border-slate-200 dark:border-slate-800">
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"
@@ -230,6 +253,32 @@ function DashboardLayoutContent({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* MJ Signature Credits */}
+            {!isCollapsed && (
+              <div className="mt-6 px-2 animate-fade-in">
+                <div className="h-px w-full bg-slate-100 dark:bg-slate-800/60 mb-6 shadow-tiny" />
+                <a 
+                  href="https://linkedin.com/in/mathew-mabira-24861632b" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-between p-3.5 bg-white/40 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 rounded-2xl transition-all hover:border-primary/20 hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-95 shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+                      <Linkedin className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] italic mb-0.5 group-hover:text-primary/70 transition-colors">Designed & Built BY</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-white font-outfit uppercase tracking-tighter italic shadow-primary-sm group-hover:tracking-widest transition-all">MJ</span>
+                    </div>
+                  </div>
+                  <div className="h-6 w-6 rounded-lg bg-primary/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                    <LayoutDashboard className="h-3 w-3 text-primary rotate-45" />
+                  </div>
+                </a>
+              </div>
+            )}
           </SidebarFooter>
         </Sidebar>
         <div
@@ -255,10 +304,14 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-          </div>
+          </header>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 lg:p-10 scrollbar-hide animate-fade-in">
+          <div className="max-w-[1600px] mx-auto space-y-8">
+            {children}
+          </div>
+        </main>
       </SidebarInset>
-    </>
+    </div>
   );
 }

@@ -7,6 +7,7 @@ A comprehensive multi-provider financial reconciliation and monitoring platform 
 ### 🏦 Multi-Provider Support
 
 Unified integration with:
+
 - **Mobile Money**: EcoCash, OneMoney, InnBucks
 - **Banks**: ZB Bank, CBZ, NMB, Nedbank, Stanbic, Steward Bank
 - **Aggregators**: Paynow, PawaPay, Tola Mobile
@@ -149,7 +150,9 @@ agent-banking-system/
 ## Dashboard Pages
 
 ### Home Dashboard
+
 System overview with key metrics:
+
 - Total float balance
 - Active providers
 - Today's transactions
@@ -158,7 +161,9 @@ System overview with key metrics:
 - Quick actions
 
 ### Transactions
+
 Transaction management and analysis:
+
 - View all transactions
 - Filter by provider, date, status
 - Search by reference
@@ -166,7 +171,9 @@ Transaction management and analysis:
 - Analyze suspicious transactions
 
 ### Reconciliation
+
 Reconciliation management:
+
 - Per-provider reconciliation
 - Batch reconciliation
 - Discrepancy details
@@ -174,7 +181,9 @@ Reconciliation management:
 - Settlement records
 
 ### Floats
+
 Float balance tracking:
+
 - Per-provider balances
 - Health indicators
 - Float movement history
@@ -182,7 +191,9 @@ Float balance tracking:
 - Float forecasting
 
 ### Alerts
+
 Alert management:
+
 - View all alerts
 - Filter by severity
 - Acknowledge alerts
@@ -190,7 +201,9 @@ Alert management:
 - Alert history
 
 ### Commissions
+
 Commission tracking:
+
 - Employee commissions
 - Breakdown by type
 - Breakdown by provider
@@ -198,7 +211,9 @@ Commission tracking:
 - Commission history
 
 ### CSV Import
+
 Bulk transaction import:
+
 - File upload and validation
 - Error reporting
 - Import history
@@ -208,39 +223,47 @@ Bulk transaction import:
 ## API Endpoints
 
 ### Providers
+
 - `GET /api/trpc/providers.list` - List all providers
 - `GET /api/trpc/providers.getById` - Get provider details
 - `GET /api/trpc/providers.health` - Check provider health
 
 ### Transactions
+
 - `GET /api/trpc/transactions.listByProvider` - Get provider transactions
 - `GET /api/trpc/transactions.listByDateRange` - Get transactions by date
 - `GET /api/trpc/transactions.flaggedTransactions` - Get flagged transactions
 - `POST /api/trpc/transactions.analyzeTransaction` - Analyze transaction
 
 ### Reconciliation
+
 - `POST /api/trpc/reconciliation.reconcileProvider` - Reconcile provider
 - `POST /api/trpc/reconciliation.reconcileAll` - Reconcile all providers
 
 ### Floats
+
 - `GET /api/trpc/floats.getByProvider` - Get provider float
 - `GET /api/trpc/floats.getTotalBalance` - Get total float
 
 ### Commissions
+
 - `GET /api/trpc/commissions.calculateEmployee` - Calculate employee commission
 - `GET /api/trpc/commissions.getReport` - Get commission report
 
 ### Alerts
+
 - `GET /api/trpc/alerts.getHistory` - Get alert history
 - `POST /api/trpc/alerts.acknowledge` - Acknowledge alert
 - `POST /api/trpc/alerts.checkThresholds` - Check thresholds
 
 ### Reports
+
 - `GET /api/trpc/reports.dailySummary` - Daily summary
 - `GET /api/trpc/reports.agentPnL` - Agent P&L report
 - `GET /api/trpc/reports.providerBreakdown` - Provider breakdown
 
 ### CSV Import
+
 - `POST /api/trpc/csvImport.importTransactions` - Import CSV
 - `GET /api/trpc/csvImport.validateCSV` - Validate CSV
 - `GET /api/trpc/csvImport.getTemplate` - Get CSV template
@@ -303,6 +326,7 @@ pnpm test --watch
 ### Test Coverage
 
 Tests cover:
+
 - Reconciliation logic
 - Commission calculations
 - Alert triggering
@@ -349,6 +373,7 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed instructions.
 ### Reporting Issues
 
 Include:
+
 - Error message or description
 - Steps to reproduce
 - Relevant logs

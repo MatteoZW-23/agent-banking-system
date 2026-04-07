@@ -25,7 +25,8 @@ describe("Transaction Analysis Service", () => {
         timeOfDay: "business_hours",
       };
 
-      const riskScore = transactionAnalysisService.calculateRiskScore(transaction);
+      const riskScore =
+        transactionAnalysisService.calculateRiskScore(transaction);
 
       expect(riskScore).toBeGreaterThanOrEqual(0.0);
       expect(riskScore).toBeLessThan(0.3);
@@ -40,7 +41,8 @@ describe("Transaction Analysis Service", () => {
         timeOfDay: "off_hours",
       };
 
-      const riskScore = transactionAnalysisService.calculateRiskScore(transaction);
+      const riskScore =
+        transactionAnalysisService.calculateRiskScore(transaction);
 
       expect(riskScore).toBeGreaterThanOrEqual(0.3);
       expect(riskScore).toBeLessThan(0.7);
@@ -55,7 +57,8 @@ describe("Transaction Analysis Service", () => {
         timeOfDay: "late_night",
       };
 
-      const riskScore = transactionAnalysisService.calculateRiskScore(transaction);
+      const riskScore =
+        transactionAnalysisService.calculateRiskScore(transaction);
 
       expect(riskScore).toBeGreaterThanOrEqual(0.7);
       expect(riskScore).toBeLessThanOrEqual(1.0);
@@ -99,7 +102,8 @@ describe("Transaction Analysis Service", () => {
         averageAmount: 1000.0,
       };
 
-      const deviation = transactionAnalysisService.getAmountDeviation(transaction);
+      const deviation =
+        transactionAnalysisService.getAmountDeviation(transaction);
       expect(deviation).toBe(100); // 100% above average
     });
   });
@@ -112,7 +116,8 @@ describe("Transaction Analysis Service", () => {
         { timestamp: new Date(Date.now()) }, // now
       ];
 
-      const isRapidFire = transactionAnalysisService.isRapidFirePattern(transactions);
+      const isRapidFire =
+        transactionAnalysisService.isRapidFirePattern(transactions);
       expect(isRapidFire).toBe(true);
     });
 
@@ -123,14 +128,16 @@ describe("Transaction Analysis Service", () => {
         { timestamp: new Date(Date.now()) }, // now
       ];
 
-      const isRapidFire = transactionAnalysisService.isRapidFirePattern(transactions);
+      const isRapidFire =
+        transactionAnalysisService.isRapidFirePattern(transactions);
       expect(isRapidFire).toBe(false);
     });
 
     it("should handle single transaction", () => {
       const transactions = [{ timestamp: new Date() }];
 
-      const isRapidFire = transactionAnalysisService.isRapidFirePattern(transactions);
+      const isRapidFire =
+        transactionAnalysisService.isRapidFirePattern(transactions);
       expect(isRapidFire).toBe(false);
     });
   });
@@ -143,7 +150,8 @@ describe("Transaction Analysis Service", () => {
         accountAge: 0,
       };
 
-      const isAnomalous = transactionAnalysisService.isNewCustomerAnomaly(transaction);
+      const isAnomalous =
+        transactionAnalysisService.isNewCustomerAnomaly(transaction);
       expect(isAnomalous).toBe(true);
     });
 
@@ -154,7 +162,8 @@ describe("Transaction Analysis Service", () => {
         accountAge: 365,
       };
 
-      const isAnomalous = transactionAnalysisService.isNewCustomerAnomaly(transaction);
+      const isAnomalous =
+        transactionAnalysisService.isNewCustomerAnomaly(transaction);
       expect(isAnomalous).toBe(false);
     });
 
@@ -165,7 +174,8 @@ describe("Transaction Analysis Service", () => {
         hasPerformedBefore: false,
       };
 
-      const isFirstTime = transactionAnalysisService.isFirstTimeTransaction(transaction);
+      const isFirstTime =
+        transactionAnalysisService.isFirstTimeTransaction(transaction);
       expect(isFirstTime).toBe(true);
     });
   });
@@ -176,7 +186,8 @@ describe("Transaction Analysis Service", () => {
         timestamp: new Date("2026-04-06T02:00:00"), // 2 AM
       };
 
-      const isOffHours = transactionAnalysisService.isOffHoursTransaction(transaction);
+      const isOffHours =
+        transactionAnalysisService.isOffHoursTransaction(transaction);
       expect(isOffHours).toBe(true);
     });
 
@@ -185,7 +196,8 @@ describe("Transaction Analysis Service", () => {
         timestamp: new Date("2026-04-06T14:00:00"), // 2 PM
       };
 
-      const isOffHours = transactionAnalysisService.isOffHoursTransaction(transaction);
+      const isOffHours =
+        transactionAnalysisService.isOffHoursTransaction(transaction);
       expect(isOffHours).toBe(false);
     });
 
@@ -194,7 +206,8 @@ describe("Transaction Analysis Service", () => {
         timestamp: new Date("2026-04-05T14:00:00"), // Saturday
       };
 
-      const isWeekend = transactionAnalysisService.isWeekendTransaction(transaction);
+      const isWeekend =
+        transactionAnalysisService.isWeekendTransaction(transaction);
       expect(isWeekend).toBe(true);
     });
 
@@ -203,7 +216,8 @@ describe("Transaction Analysis Service", () => {
         timestamp: new Date("2026-04-07T14:00:00"), // Monday
       };
 
-      const isWeekend = transactionAnalysisService.isWeekendTransaction(transaction);
+      const isWeekend =
+        transactionAnalysisService.isWeekendTransaction(transaction);
       expect(isWeekend).toBe(false);
     });
   });
@@ -211,23 +225,41 @@ describe("Transaction Analysis Service", () => {
   describe("Cross-Provider Pattern Detection", () => {
     it("should detect coordinated transactions across providers", () => {
       const transactions = [
-        { providerId: 1, amount: 5000.0, timestamp: new Date(Date.now() - 60000) },
-        { providerId: 2, amount: 5000.0, timestamp: new Date(Date.now() - 30000) },
+        {
+          providerId: 1,
+          amount: 5000.0,
+          timestamp: new Date(Date.now() - 60000),
+        },
+        {
+          providerId: 2,
+          amount: 5000.0,
+          timestamp: new Date(Date.now() - 30000),
+        },
         { providerId: 3, amount: 5000.0, timestamp: new Date(Date.now()) },
       ];
 
-      const isCoordinated = transactionAnalysisService.isCoordinatedPattern(transactions);
+      const isCoordinated =
+        transactionAnalysisService.isCoordinatedPattern(transactions);
       expect(isCoordinated).toBe(true);
     });
 
     it("should not flag normal multi-provider transactions", () => {
       const transactions = [
-        { providerId: 1, amount: 1000.0, timestamp: new Date(Date.now() - 3600000) },
-        { providerId: 2, amount: 2000.0, timestamp: new Date(Date.now() - 1800000) },
+        {
+          providerId: 1,
+          amount: 1000.0,
+          timestamp: new Date(Date.now() - 3600000),
+        },
+        {
+          providerId: 2,
+          amount: 2000.0,
+          timestamp: new Date(Date.now() - 1800000),
+        },
         { providerId: 3, amount: 500.0, timestamp: new Date(Date.now()) },
       ];
 
-      const isCoordinated = transactionAnalysisService.isCoordinatedPattern(transactions);
+      const isCoordinated =
+        transactionAnalysisService.isCoordinatedPattern(transactions);
       expect(isCoordinated).toBe(false);
     });
   });

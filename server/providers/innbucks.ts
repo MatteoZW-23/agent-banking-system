@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface InnBucksTransaction {
   id: string;
@@ -47,11 +53,16 @@ export class InnBucksAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[InnBucks] Authentication failed:", error);
-      throw new Error(`InnBucks authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `InnBucks authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
@@ -76,10 +87,12 @@ export class InnBucksAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.data.map((txn) => this.normalizeTransaction(txn));
+      return response.data.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[InnBucks] Failed to fetch transactions:", error);
-      throw new Error(`InnBucks transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `InnBucks transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -110,7 +123,9 @@ export class InnBucksAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[InnBucks] Failed to get balance:", error);
-      throw new Error(`InnBucks balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `InnBucks balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -128,7 +143,7 @@ export class InnBucksAdapter extends RestProviderAdapter {
   protected getDefaultHeaders(): Record<string, string> {
     return {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${this.apiKey}`,
       "X-API-Version": "2.0",
     };
   }

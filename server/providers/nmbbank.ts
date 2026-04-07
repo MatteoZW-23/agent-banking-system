@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface NMBTransaction {
   transactionId: string;
@@ -48,11 +54,16 @@ export class NMBBankAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[NMB Bank] Authentication failed:", error);
-      throw new Error(`NMB Bank authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `NMB Bank authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
@@ -77,10 +88,12 @@ export class NMBBankAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.transactions.map((txn) => this.normalizeTransaction(txn));
+      return response.transactions.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[NMB Bank] Failed to fetch transactions:", error);
-      throw new Error(`NMB Bank transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `NMB Bank transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -89,10 +102,13 @@ export class NMBBankAdapter extends RestProviderAdapter {
 
     try {
       const response = await this.retryWithBackoff(async () => {
-        const res = await fetch(`${this.config.apiEndpoint}/api/v1/accounts/balance`, {
-          method: "GET",
-          headers: this.getDefaultHeaders(),
-        });
+        const res = await fetch(
+          `${this.config.apiEndpoint}/api/v1/accounts/balance`,
+          {
+            method: "GET",
+            headers: this.getDefaultHeaders(),
+          }
+        );
 
         if (!res.ok) {
           throw new Error(`Failed to get balance: ${res.status}`);
@@ -110,7 +126,9 @@ export class NMBBankAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[NMB Bank] Failed to get balance:", error);
-      throw new Error(`NMB Bank balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `NMB Bank balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -159,8 +177,13 @@ export class NMBBankAdapter extends RestProviderAdapter {
     return mapping[type] || type.toLowerCase();
   }
 
-  protected mapStatus(status: string): "completed" | "pending" | "failed" | "reversed" {
-    const mapping: Record<string, "completed" | "pending" | "failed" | "reversed"> = {
+  protected mapStatus(
+    status: string
+  ): "completed" | "pending" | "failed" | "reversed" {
+    const mapping: Record<
+      string,
+      "completed" | "pending" | "failed" | "reversed"
+    > = {
       SUCCESS: "completed",
       COMPLETED: "completed",
       PENDING: "pending",

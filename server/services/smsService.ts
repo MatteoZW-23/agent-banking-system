@@ -41,9 +41,9 @@ export class AfricasTalkingSMSService {
     this.apiClient = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "Content-Type": "application/x-www-form-urlencoded",
-        "apiKey": this.apiKey,
+        apiKey: this.apiKey,
       },
       timeout: 10000,
     });
@@ -91,7 +91,7 @@ export class AfricasTalkingSMSService {
    * Send bulk SMS messages
    */
   async sendBulkSMS(messages: SMSMessage[]): Promise<SMSResponse[]> {
-    return Promise.all(messages.map((msg) => this.sendSMS(msg)));
+    return Promise.all(messages.map(msg => this.sendSMS(msg)));
   }
 
   /**
@@ -105,7 +105,7 @@ export class AfricasTalkingSMSService {
   ): Promise<SMSResponse[]> {
     const messageType = priority === "critical" ? "flash" : "text";
 
-    const messages: SMSMessage[] = recipients.map((phone) => ({
+    const messages: SMSMessage[] = recipients.map(phone => ({
       to: phone,
       message: `[${alertType.toUpperCase()}] ${message}`,
       messageType,
@@ -164,7 +164,7 @@ export class AfricasTalkingSMSService {
       }
     });
 
-    entriesToDelete.forEach((messageId) => {
+    entriesToDelete.forEach(messageId => {
       this.deliveryReports.delete(messageId);
       count++;
     });

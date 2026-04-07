@@ -246,7 +246,7 @@ describe("Alert Service", () => {
     it("should route all alerts to dashboard", () => {
       const severities = ["critical", "high", "medium", "low"] as const;
 
-      severities.forEach((severity) => {
+      severities.forEach(severity => {
         const alert = { severity, type: "discrepancy" as const };
         expect(alertService.shouldShowInDashboard(alert)).toBe(true);
       });

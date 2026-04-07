@@ -5,10 +5,28 @@ import { eq } from "drizzle-orm";
 export interface CSVImportRow {
   date: string;
   reference: string;
-  type: "cash_in" | "cash_out" | "send_money" | "receive_money" | "bill_payment" | "airtime" | "data_bundle" | "ticket_purchase" | "bank_transfer" | "salary_disbursement" | "float_purchase" | "float_redemption";
+  type:
+    | "cash_in"
+    | "cash_out"
+    | "send_money"
+    | "receive_money"
+    | "bill_payment"
+    | "airtime"
+    | "data_bundle"
+    | "ticket_purchase"
+    | "bank_transfer"
+    | "salary_disbursement"
+    | "float_purchase"
+    | "float_redemption";
   amount: string;
   fee?: string;
-  status: "pending" | "processing" | "completed" | "failed" | "reversed" | "disputed";
+  status:
+    | "pending"
+    | "processing"
+    | "completed"
+    | "failed"
+    | "reversed"
+    | "disputed";
   description?: string;
   employeeCode?: string;
 }
@@ -29,6 +47,15 @@ export interface CSVImportResult {
  * Supports providers like Metbank, POSB, Agribank, MyCash
  */
 export class CSVImportService {
+  importTransactions(providerId: number, csvContent: string): any {
+    throw new Error("Method not implemented.");
+  }
+  validateFormat(providerId: number, csvContent: string): any {
+    throw new Error("Method not implemented.");
+  }
+  getTemplate(providerId: number): any {
+    throw new Error("Method not implemented.");
+  }
   /**
    * Parse CSV content and import transactions
    */
@@ -51,14 +78,20 @@ export class CSVImportService {
     try {
       // Parse CSV
       const lines = csvContent.trim().split("\n");
-      const headers = lines[0].split(delimiter).map((h) => h.trim().toLowerCase());
+      const headers = lines[0]
+        .split(delimiter)
+        .map(h => h.trim().toLowerCase());
 
       // Validate headers
       const requiredHeaders = ["date", "reference", "type", "amount", "status"];
-      const hasRequiredHeaders = requiredHeaders.every((h) => headers.includes(h));
+      const hasRequiredHeaders = requiredHeaders.every(h =>
+        headers.includes(h)
+      );
 
       if (!hasRequiredHeaders) {
-        throw new Error(`CSV missing required headers: ${requiredHeaders.join(", ")}`);
+        throw new Error(
+          `CSV missing required headers: ${requiredHeaders.join(", ")}`
+        );
       }
 
       // Get provider
@@ -77,7 +110,7 @@ export class CSVImportService {
       // Process each row
       for (let i = 1; i < lines.length; i++) {
         try {
-          const values = lines[i].split(delimiter).map((v) => v.trim());
+          const values = lines[i].split(delimiter).map(v => v.trim());
           const row: Record<string, string> = {};
 
           headers.forEach((header, idx) => {
@@ -85,7 +118,13 @@ export class CSVImportService {
           });
 
           // Validate required fields
-          if (!row.date || !row.reference || !row.type || !row.amount || !row.status) {
+          if (
+            !row.date ||
+            !row.reference ||
+            !row.type ||
+            !row.amount ||
+            !row.status
+          ) {
             result.errors.push({
               row: i + 1,
               error: "Missing required fields",
@@ -157,14 +196,19 @@ export class CSVImportService {
 
       return result;
     } catch (error) {
-      throw new Error(`CSV import failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `CSV import failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
   /**
    * Validate CSV format before import
    */
-  validateCSVFormat(csvContent: string, delimiter: string = ","): {
+  validateCSVFormat(
+    csvContent: string,
+    delimiter: string = ","
+  ): {
     valid: boolean;
     errors: string[];
   } {
@@ -178,7 +222,9 @@ export class CSVImportService {
         return { valid: false, errors };
       }
 
-      const headers = lines[0].split(delimiter).map((h) => h.trim().toLowerCase());
+      const headers = lines[0]
+        .split(delimiter)
+        .map(h => h.trim().toLowerCase());
       const requiredHeaders = ["date", "reference", "type", "amount", "status"];
 
       for (const required of requiredHeaders) {
@@ -191,7 +237,9 @@ export class CSVImportService {
       for (let i = 1; i < Math.min(lines.length, 6); i++) {
         const values = lines[i].split(delimiter);
         if (values.length !== headers.length) {
-          errors.push(`Row ${i + 1} has ${values.length} columns, expected ${headers.length}`);
+          errors.push(
+            `Row ${i + 1} has ${values.length} columns, expected ${headers.length}`
+          );
         }
       }
 
@@ -200,7 +248,9 @@ export class CSVImportService {
         errors,
       };
     } catch (error) {
-      errors.push(`CSV parsing error: ${error instanceof Error ? error.message : String(error)}`);
+      errors.push(
+        `CSV parsing error: ${error instanceof Error ? error.message : String(error)}`
+      );
       return { valid: false, errors };
     }
   }
@@ -209,11 +259,47 @@ export class CSVImportService {
    * Generate CSV template for a provider
    */
   generateCSVTemplate(providerName: string): string {
-    const headers = ["Date", "Reference", "Type", "Amount", "Fee", "Status", "Description", "EmployeeCode"];
+    const headers = [
+      "Date",
+      "Reference",
+      "Type",
+      "Amount",
+      "Fee",
+      "Status",
+      "Description",
+      "EmployeeCode",
+    ];
     const sampleRows = [
-      ["2026-04-06", "TXN001", "cash_out", "100.00", "2.50", "completed", "Cash withdrawal", "EMP001"],
-      ["2026-04-06", "TXN002", "cash_in", "250.00", "5.00", "completed", "Cash deposit", "EMP002"],
-      ["2026-04-05", "TXN003", "send_money", "500.00", "10.00", "completed", "Money transfer", "EMP001"],
+      [
+        "2026-04-06",
+        "TXN001",
+        "cash_out",
+        "100.00",
+        "2.50",
+        "completed",
+        "Cash withdrawal",
+        "EMP001",
+      ],
+      [
+        "2026-04-06",
+        "TXN002",
+        "cash_in",
+        "250.00",
+        "5.00",
+        "completed",
+        "Cash deposit",
+        "EMP002",
+      ],
+      [
+        "2026-04-05",
+        "TXN003",
+        "send_money",
+        "500.00",
+        "10.00",
+        "completed",
+        "Money transfer",
+        "EMP001",
+      ],
     ];
 
     const csvContent = [
@@ -223,7 +309,7 @@ export class CSVImportService {
       `# Status: completed, pending, failed`,
       "",
       headers.join(","),
-      ...sampleRows.map((row) => row.join(",")),
+      ...sampleRows.map(row => row.join(",")),
     ].join("\n");
 
     return csvContent;

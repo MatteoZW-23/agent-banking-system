@@ -27,7 +27,9 @@ export class CredentialManager {
     return CredentialManager.instance;
   }
 
-  async loadCredentials(providerId: number): Promise<ProviderCredential | null> {
+  async loadCredentials(
+    providerId: number
+  ): Promise<ProviderCredential | null> {
     // Check cache first
     if (this.credentials.has(providerId)) {
       return this.credentials.get(providerId) || null;
@@ -54,12 +56,18 @@ export class CredentialManager {
       this.credentials.set(providerId, cred);
       return cred;
     } catch (error) {
-      console.error(`[CredentialManager] Failed to load credentials for provider ${providerId}:`, error);
+      console.error(
+        `[CredentialManager] Failed to load credentials for provider ${providerId}:`,
+        error
+      );
       return null;
     }
   }
 
-  async saveCredential(providerId: number, credential: ProviderCredential): Promise<boolean> {
+  async saveCredential(
+    providerId: number,
+    credential: ProviderCredential
+  ): Promise<boolean> {
     try {
       const db = await getDb();
       if (!db) return false;
@@ -68,7 +76,10 @@ export class CredentialManager {
       this.credentials.set(providerId, credential);
       return true;
     } catch (error) {
-      console.error(`[CredentialManager] Failed to save credential for provider ${providerId}:`, error);
+      console.error(
+        `[CredentialManager] Failed to save credential for provider ${providerId}:`,
+        error
+      );
       return false;
     }
   }

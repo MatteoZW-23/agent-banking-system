@@ -63,14 +63,14 @@ SMS_MIN_SEVERITY=high
 
 ### Environment Variable Descriptions
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `AFRICAS_TALKING_API_KEY` | Your Africa's Talking API Key | `abc123def456ghi789` |
-| `AFRICAS_TALKING_USERNAME` | Your Africa's Talking Username | `myapp` |
-| `SMS_ALERTS_ENABLED` | Enable/disable SMS alerts globally | `true` or `false` |
-| `SMS_ALERT_RECIPIENTS` | Comma-separated phone numbers | `+263712345678,+263712345679` |
-| `SMS_ALERT_TYPES` | Alert types to notify | `discrepancy,low_float,failed_reconciliation` |
-| `SMS_MIN_SEVERITY` | Minimum severity to trigger SMS | `low`, `medium`, `high`, `critical` |
+| Variable                   | Description                        | Example                                       |
+| -------------------------- | ---------------------------------- | --------------------------------------------- |
+| `AFRICAS_TALKING_API_KEY`  | Your Africa's Talking API Key      | `abc123def456ghi789`                          |
+| `AFRICAS_TALKING_USERNAME` | Your Africa's Talking Username     | `myapp`                                       |
+| `SMS_ALERTS_ENABLED`       | Enable/disable SMS alerts globally | `true` or `false`                             |
+| `SMS_ALERT_RECIPIENTS`     | Comma-separated phone numbers      | `+263712345678,+263712345679`                 |
+| `SMS_ALERT_TYPES`          | Alert types to notify              | `discrepancy,low_float,failed_reconciliation` |
+| `SMS_MIN_SEVERITY`         | Minimum severity to trigger SMS    | `low`, `medium`, `high`, `critical`           |
 
 ## Step 4: Configure SMS Settings in Dashboard
 
@@ -106,45 +106,50 @@ curl -X POST http://localhost:3000/api/trpc/sms.test \
 
 The system automatically formats phone numbers to international format. Supported formats:
 
-| Input Format | Converted To | Notes |
-|--------------|--------------|-------|
-| `0712345678` | `+263712345678` | Zimbabwe local format |
-| `712345678` | `+263712345678` | Without leading 0 |
-| `263712345678` | `+263712345678` | Country code without + |
-| `+263712345678` | `+263712345678` | Already formatted |
+| Input Format    | Converted To    | Notes                  |
+| --------------- | --------------- | ---------------------- |
+| `0712345678`    | `+263712345678` | Zimbabwe local format  |
+| `712345678`     | `+263712345678` | Without leading 0      |
+| `263712345678`  | `+263712345678` | Country code without + |
+| `+263712345678` | `+263712345678` | Already formatted      |
 
 ## Alert Severity Levels
 
 SMS notifications respect severity levels. Configure the minimum severity to avoid alert fatigue:
 
-| Level | Description | Use Case |
-|-------|-------------|----------|
-| `low` | Minor issues | Informational alerts |
-| `medium` | Notable issues | Unusual but manageable situations |
-| `high` | Significant issues | Requires attention (recommended default) |
-| `critical` | Urgent issues | Immediate action required |
+| Level      | Description        | Use Case                                 |
+| ---------- | ------------------ | ---------------------------------------- |
+| `low`      | Minor issues       | Informational alerts                     |
+| `medium`   | Notable issues     | Unusual but manageable situations        |
+| `high`     | Significant issues | Requires attention (recommended default) |
+| `critical` | Urgent issues      | Immediate action required                |
 
 ## Alert Types
 
 Configure which alert types should trigger SMS notifications:
 
 ### Discrepancy Alerts
+
 - **Trigger**: Transaction discrepancies exceed configured threshold (default: $10)
 - **Example**: "DISCREPANCY: EcoCash reconciliation shows $50 discrepancy"
 
 ### Low Float Alerts
+
 - **Trigger**: Provider float balance falls below minimum threshold
 - **Example**: "LOW_FLOAT: EcoCash float balance is $100 (below $500 minimum)"
 
 ### Failed Reconciliation
+
 - **Trigger**: Automated reconciliation process fails
 - **Example**: "FAILED_RECONCILIATION: Daily reconciliation failed for EcoCash"
 
 ### Suspicious Transaction
+
 - **Trigger**: LLM analysis flags transaction as potentially fraudulent
 - **Example**: "SUSPICIOUS_TRANSACTION: Transaction #12345 flagged as high-risk"
 
 ### High Commission
+
 - **Trigger**: Commission amount exceeds normal range
 - **Example**: "HIGH_COMMISSION: Employee commission for today is $500 (3x average)"
 
@@ -152,23 +157,25 @@ Configure which alert types should trigger SMS notifications:
 
 The system automatically tracks SMS delivery status:
 
-| Status | Meaning |
-|--------|---------|
-| `pending` | SMS queued for sending |
-| `sent` | SMS successfully sent to carrier |
-| `delivered` | SMS delivered to recipient |
-| `failed` | SMS delivery failed |
+| Status      | Meaning                          |
+| ----------- | -------------------------------- |
+| `pending`   | SMS queued for sending           |
+| `sent`      | SMS successfully sent to carrier |
+| `delivered` | SMS delivered to recipient       |
+| `failed`    | SMS delivery failed              |
 
 View delivery reports in the **Alerts** page under SMS Notification History.
 
 ## Cost Management
 
 ### Sandbox Testing
+
 - Sandbox SMS are free for testing
 - No actual SMS sent; messages logged only
 - Perfect for development and testing
 
 ### Production Usage
+
 - Each SMS costs approximately $0.02-0.05 USD (varies by destination)
 - Monitor usage in Africa's Talking dashboard
 - Set up billing alerts to avoid unexpected charges
@@ -187,6 +194,7 @@ View delivery reports in the **Alerts** page under SMS Notification History.
 **Problem**: SMS alerts are not being sent
 
 **Solutions**:
+
 1. Verify `SMS_ALERTS_ENABLED=true` in environment variables
 2. Check that phone numbers are in correct format: `+263...`
 3. Verify Africa's Talking API credentials are correct
@@ -198,6 +206,7 @@ View delivery reports in the **Alerts** page under SMS Notification History.
 **Problem**: Test SMS returns error
 
 **Solutions**:
+
 1. Verify API key and username are correct
 2. Ensure you're using sandbox credentials for testing
 3. Check internet connectivity
@@ -209,6 +218,7 @@ View delivery reports in the **Alerts** page under SMS Notification History.
 **Problem**: SMS takes too long to arrive
 
 **Solutions**:
+
 1. Check network connectivity
 2. Verify phone number is correct and active
 3. Check Africa's Talking service status
@@ -220,6 +230,7 @@ View delivery reports in the **Alerts** page under SMS Notification History.
 **Problem**: SMS charges are higher than expected
 
 **Solutions**:
+
 1. Review alert configuration - reduce alert types
 2. Increase minimum severity threshold
 3. Remove unnecessary recipients
@@ -282,6 +293,7 @@ Content-Type: application/json
 ## Support
 
 For issues with:
+
 - **Agent Banking System**: Contact system administrator
 - **Africa's Talking**: Visit https://africastalking.com/support
 - **SMS Delivery**: Check Africa's Talking dashboard for delivery reports

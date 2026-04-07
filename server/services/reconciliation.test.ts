@@ -34,7 +34,10 @@ describe("Reconciliation Engine", () => {
         },
       ];
 
-      const matches = reconciliationEngine.matchTransactions(internal, external);
+      const matches = reconciliationEngine.matchTransactions(
+        internal,
+        external
+      );
       expect(matches).toHaveLength(1);
       expect(matches[0]).toEqual({
         internal: internal[0],
@@ -64,7 +67,10 @@ describe("Reconciliation Engine", () => {
         },
       ];
 
-      const matches = reconciliationEngine.matchTransactions(internal, external);
+      const matches = reconciliationEngine.matchTransactions(
+        internal,
+        external
+      );
       expect(matches).toHaveLength(1);
       expect(matches[0]?.matchType).toBe("tolerance");
     });
@@ -97,7 +103,10 @@ describe("Reconciliation Engine", () => {
         },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.missingExternal).toHaveLength(1);
       expect(result.missingExternal[0]?.providerReference).toBe("TXN002");
     });
@@ -130,7 +139,10 @@ describe("Reconciliation Engine", () => {
         },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.missingInternal).toHaveLength(1);
       expect(result.missingInternal[0]?.reference).toBe("TXN003");
     });
@@ -156,7 +168,10 @@ describe("Reconciliation Engine", () => {
         },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.mismatches).toHaveLength(1);
       expect(result.mismatches[0]?.discrepancy).toBe(50.0);
     });
@@ -182,7 +197,10 @@ describe("Reconciliation Engine", () => {
         },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.mismatches).toHaveLength(1);
       expect(result.mismatches[0]?.discrepancyPercentage).toBeCloseTo(10);
     });
@@ -241,17 +259,50 @@ describe("Reconciliation Engine", () => {
   describe("Reconciliation Summary", () => {
     it("should calculate correct totals", () => {
       const internal = [
-        { id: 1, providerReference: "TXN001", amount: "100.00", transactionTime: new Date(), status: "completed" },
-        { id: 2, providerReference: "TXN002", amount: "200.00", transactionTime: new Date(), status: "completed" },
-        { id: 3, providerReference: "TXN003", amount: "300.00", transactionTime: new Date(), status: "completed" },
+        {
+          id: 1,
+          providerReference: "TXN001",
+          amount: "100.00",
+          transactionTime: new Date(),
+          status: "completed",
+        },
+        {
+          id: 2,
+          providerReference: "TXN002",
+          amount: "200.00",
+          transactionTime: new Date(),
+          status: "completed",
+        },
+        {
+          id: 3,
+          providerReference: "TXN003",
+          amount: "300.00",
+          transactionTime: new Date(),
+          status: "completed",
+        },
       ];
 
       const external = [
-        { id: "EXT001", reference: "TXN001", amount: 100.0, timestamp: new Date(), status: "completed" },
-        { id: "EXT002", reference: "TXN002", amount: 200.0, timestamp: new Date(), status: "completed" },
+        {
+          id: "EXT001",
+          reference: "TXN001",
+          amount: 100.0,
+          timestamp: new Date(),
+          status: "completed",
+        },
+        {
+          id: "EXT002",
+          reference: "TXN002",
+          amount: 200.0,
+          timestamp: new Date(),
+          status: "completed",
+        },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.internalTotal).toBe(600.0);
       expect(result.externalTotal).toBe(300.0);
       expect(result.totalDiscrepancy).toBe(300.0);
@@ -259,14 +310,29 @@ describe("Reconciliation Engine", () => {
 
     it("should generate summary with status", () => {
       const internal = [
-        { id: 1, providerReference: "TXN001", amount: "100.00", transactionTime: new Date(), status: "completed" },
+        {
+          id: 1,
+          providerReference: "TXN001",
+          amount: "100.00",
+          transactionTime: new Date(),
+          status: "completed",
+        },
       ];
 
       const external = [
-        { id: "EXT001", reference: "TXN001", amount: 100.0, timestamp: new Date(), status: "completed" },
+        {
+          id: "EXT001",
+          reference: "TXN001",
+          amount: 100.0,
+          timestamp: new Date(),
+          status: "completed",
+        },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.status).toBe("reconciled");
       expect(result.matchedCount).toBe(1);
       expect(result.unmatchedCount).toBe(0);
@@ -274,14 +340,29 @@ describe("Reconciliation Engine", () => {
 
     it("should mark as investigating when discrepancies exist", () => {
       const internal = [
-        { id: 1, providerReference: "TXN001", amount: "100.00", transactionTime: new Date(), status: "completed" },
+        {
+          id: 1,
+          providerReference: "TXN001",
+          amount: "100.00",
+          transactionTime: new Date(),
+          status: "completed",
+        },
       ];
 
       const external = [
-        { id: "EXT001", reference: "TXN001", amount: 150.0, timestamp: new Date(), status: "completed" },
+        {
+          id: "EXT001",
+          reference: "TXN001",
+          amount: 150.0,
+          timestamp: new Date(),
+          status: "completed",
+        },
       ];
 
-      const result = reconciliationEngine.reconcileTransactions(internal, external);
+      const result = reconciliationEngine.reconcileTransactions(
+        internal,
+        external
+      );
       expect(result.status).toBe("investigating");
     });
   });

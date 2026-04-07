@@ -1,4 +1,8 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+} from "./providerAdapter";
 
 /**
  * Steward Bank provider adapter
@@ -9,7 +13,10 @@ export class StewardAdapter extends RestProviderAdapter {
     console.log("[Steward] Authenticating with Steward Bank API");
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
     // Implementation would fetch from Steward API
     return [];

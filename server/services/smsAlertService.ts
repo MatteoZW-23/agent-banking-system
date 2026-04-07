@@ -33,8 +33,13 @@ export class SMSAlertService {
   private loadConfiguration(): void {
     this.config = {
       enabled: process.env.SMS_ALERTS_ENABLED === "true",
-      phoneNumbers: (process.env.SMS_ALERT_RECIPIENTS || "").split(",").filter((p) => p.trim()),
-      alertTypes: (process.env.SMS_ALERT_TYPES || "discrepancy,low_float,failed_reconciliation").split(","),
+      phoneNumbers: (process.env.SMS_ALERT_RECIPIENTS || "")
+        .split(",")
+        .filter(p => p.trim()),
+      alertTypes: (
+        process.env.SMS_ALERT_TYPES ||
+        "discrepancy,low_float,failed_reconciliation"
+      ).split(","),
       minSeverity: (process.env.SMS_MIN_SEVERITY || "high") as any,
     };
   }
@@ -73,8 +78,10 @@ export class SMSAlertService {
         severity as any
       );
 
-      console.log(`[SMS Alert] Sent SMS for alert ${alertId} to ${recipients.length} recipients`);
-      return responses.some((r) => r.success);
+      console.log(
+        `[SMS Alert] Sent SMS for alert ${alertId} to ${recipients.length} recipients`
+      );
+      return responses.some(r => r.success);
     } catch (error) {
       console.error("[SMS Alert] Failed to send alert SMS:", error);
       return false;
@@ -86,8 +93,10 @@ export class SMSAlertService {
    */
   private shouldSendSMS(alertType: string, severity: string): boolean {
     const severityOrder = { low: 0, medium: 1, high: 2, critical: 3 };
-    const minSeverityLevel = severityOrder[this.config.minSeverity as keyof typeof severityOrder] || 2;
-    const currentSeverityLevel = severityOrder[severity as keyof typeof severityOrder] || 0;
+    const minSeverityLevel =
+      severityOrder[this.config.minSeverity as keyof typeof severityOrder] || 2;
+    const currentSeverityLevel =
+      severityOrder[severity as keyof typeof severityOrder] || 0;
 
     return (
       this.config.alertTypes.includes(alertType) &&
@@ -139,7 +148,9 @@ let smsAlertServiceInstance: SMSAlertService | null = null;
 /**
  * Get or create SMS alert service instance
  */
-export function getSMSAlertService(smsService?: AfricasTalkingSMSService): SMSAlertService {
+export function getSMSAlertService(
+  smsService?: AfricasTalkingSMSService
+): SMSAlertService {
   if (!smsAlertServiceInstance) {
     smsAlertServiceInstance = new SMSAlertService(smsService);
   }

@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface PawaPayTransaction {
   transactionId: string;
@@ -44,11 +50,16 @@ export class PawaPayAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[PawaPay] Authentication failed:", error);
-      throw new Error(`PawaPay authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `PawaPay authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
@@ -73,10 +84,12 @@ export class PawaPayAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.transactions.map((txn) => this.normalizeTransaction(txn));
+      return response.transactions.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[PawaPay] Failed to fetch transactions:", error);
-      throw new Error(`PawaPay transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `PawaPay transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -106,7 +119,9 @@ export class PawaPayAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[PawaPay] Failed to get balance:", error);
-      throw new Error(`PawaPay balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `PawaPay balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -155,8 +170,13 @@ export class PawaPayAdapter extends RestProviderAdapter {
     return mapping[type] || type.toLowerCase();
   }
 
-  protected mapStatus(status: string): "completed" | "pending" | "failed" | "reversed" {
-    const mapping: Record<string, "completed" | "pending" | "failed" | "reversed"> = {
+  protected mapStatus(
+    status: string
+  ): "completed" | "pending" | "failed" | "reversed" {
+    const mapping: Record<
+      string,
+      "completed" | "pending" | "failed" | "reversed"
+    > = {
       SUCCESS: "completed",
       COMPLETED: "completed",
       PENDING: "pending",

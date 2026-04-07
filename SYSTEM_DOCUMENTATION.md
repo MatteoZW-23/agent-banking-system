@@ -132,24 +132,31 @@ Each provider implements the `ProviderAdapter` interface with three core methods
 ## Dashboard Pages
 
 ### Home Dashboard
+
 Overview of system health, key metrics, and quick access to main features.
 
 ### Transactions
+
 View and filter all transactions across providers with status indicators and flagged transaction highlighting.
 
 ### Reconciliation
+
 Manage reconciliation process with per-provider and batch reconciliation options. View discrepancy details and mismatches.
 
 ### Floats
+
 Monitor float balances across all providers with health indicators. Receive alerts for low float conditions.
 
 ### Alerts
+
 Manage system alerts with severity levels. Acknowledge alerts and track resolution status.
 
 ### Commissions
+
 Track employee commissions with breakdown by transaction type and provider. Identify top performers.
 
 ### CSV Import
+
 Import transactions from offline providers with validation and error reporting.
 
 ## Reconciliation Process
@@ -354,24 +361,28 @@ Each provider requires:
 ### Common Issues
 
 **Provider Connection Failed**
+
 - Verify API credentials
 - Check network connectivity
 - Review provider API status
 - Check certificate validity for mTLS
 
 **Reconciliation Discrepancies**
+
 - Verify transaction timestamps match
 - Check for duplicate transactions
 - Review fee calculations
 - Investigate provider-side processing delays
 
 **Low Float Alerts**
+
 - Verify float balance data
 - Check recent transactions
 - Review deposit/withdrawal timing
 - Contact provider for manual balance verification
 
 **LLM Analysis Failures**
+
 - Check LLM service connectivity
 - Verify transaction data format
 - Review error logs

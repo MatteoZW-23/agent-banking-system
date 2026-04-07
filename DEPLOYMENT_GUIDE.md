@@ -96,7 +96,7 @@ Configure each provider in the database:
 
 ```sql
 INSERT INTO providers (name, category, agent_service_name, api_endpoint, auth_type, is_active)
-VALUES 
+VALUES
   ('EcoCash', 'mobile_money', 'EcoCash Agent', 'https://api.ecocash.com.zw', 'oauth2', true),
   ('OneMoney', 'mobile_money', 'OneMoney Agent', 'https://api.onemoney.co.zw/soap', 'basic', true),
   ('InnBucks', 'mobile_money', 'InnBucks Agent', 'https://api.innbucks.com', 'apikey', true),
@@ -111,7 +111,7 @@ Configure alert thresholds:
 
 ```sql
 INSERT INTO alert_configurations (alert_type, threshold_value, is_active, created_at)
-VALUES 
+VALUES
   ('discrepancy', '10', true, NOW()),
   ('low_float', '500', true, NOW()),
   ('suspicious_transaction', '0.7', true, NOW()),
@@ -139,7 +139,7 @@ Provider credentials are stored encrypted in `agent_registrations` table:
 
 ```sql
 INSERT INTO agent_registrations (provider_id, agent_code, merchant_id, api_key_encrypted, api_secret_encrypted, float_account, commission_rate, is_primary)
-VALUES 
+VALUES
   (1, 'AGENT001', 'MERCH001', 'encrypted_key', 'encrypted_secret', 'FLOAT001', 2.50, true);
 ```
 
@@ -149,7 +149,7 @@ Define commission rates per provider and transaction type:
 
 ```sql
 INSERT INTO commission_structures (provider_id, transaction_type, rate_percentage, min_amount, max_amount, fixed_fee, is_active)
-VALUES 
+VALUES
   (1, 'cash_out', 2.50, 0, 10000, 0, true),
   (1, 'cash_in', 1.50, 0, 10000, 0, true),
   (1, 'send_money', 3.00, 0, 50000, 0, true);
@@ -160,8 +160,8 @@ VALUES
 Set minimum and maximum float thresholds per provider:
 
 ```sql
-UPDATE provider_floats 
-SET minimum_threshold = 500, maximum_threshold = 50000 
+UPDATE provider_floats
+SET minimum_threshold = 500, maximum_threshold = 50000
 WHERE provider_id = 1;
 ```
 
@@ -229,11 +229,11 @@ Keep transaction records for minimum 7 years:
 
 ```sql
 -- Archive old transactions (example: older than 2 years)
-INSERT INTO transactions_archive 
-SELECT * FROM transactions 
+INSERT INTO transactions_archive
+SELECT * FROM transactions
 WHERE transaction_time < DATE_SUB(NOW(), INTERVAL 2 YEAR);
 
-DELETE FROM transactions 
+DELETE FROM transactions
 WHERE transaction_time < DATE_SUB(NOW(), INTERVAL 2 YEAR);
 ```
 

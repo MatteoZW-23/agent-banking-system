@@ -47,14 +47,21 @@ INSERT INTO providers (
 Create a new provider adapter file: `server/providers/provider-name.ts`
 
 ```typescript
-import { RestProviderAdapter, ProviderTransaction, FloatBalance } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+} from "./providerAdapter";
 
 export class ProviderNameAdapter extends RestProviderAdapter {
   async authenticate(): Promise<void> {
     // Implement authentication logic
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     // Implement transaction fetching
   }
 
@@ -167,7 +174,10 @@ curl -X GET https://api.provider.com/balance \
 // In server/routers.ts
 const adapter = new ProviderNameAdapter(config, credentials);
 await adapter.authenticate();
-const transactions = await adapter.fetchTransactions(new Date("2026-04-01"), new Date("2026-04-06"));
+const transactions = await adapter.fetchTransactions(
+  new Date("2026-04-01"),
+  new Date("2026-04-06")
+);
 const balance = await adapter.getFloatBalance();
 ```
 
@@ -180,12 +190,12 @@ Ensure transactions are correctly normalized:
 const transaction = {
   id: "TXN001",
   reference: "REF001",
-  amount: 1000.00,
-  fee: 25.00,
+  amount: 1000.0,
+  fee: 25.0,
   status: "completed",
   timestamp: new Date(),
   customerPhone: "+263771234567",
-  type: "cash_out"
+  type: "cash_out",
 };
 ```
 
@@ -204,11 +214,13 @@ UPDATE providers SET is_active = true WHERE id = <provider_id>;
 **Authentication Type**: OAuth2 (Client Credentials)
 
 **Required Credentials**:
+
 - Client ID
 - Client Secret
 - OAuth Token Endpoint
 
 **Configuration**:
+
 ```json
 {
   "clientId": "your-client-id",
@@ -218,6 +230,7 @@ UPDATE providers SET is_active = true WHERE id = <provider_id>;
 ```
 
 **Commission Rates**:
+
 - Cash Out: 2.50%
 - Cash In: 1.50%
 - Send Money: 3.00%
@@ -227,11 +240,13 @@ UPDATE providers SET is_active = true WHERE id = <provider_id>;
 **Authentication Type**: SOAP (Basic Auth)
 
 **Required Credentials**:
+
 - Username
 - Password
 - WSDL Endpoint
 
 **Configuration**:
+
 ```json
 {
   "username": "your-username",
@@ -245,10 +260,12 @@ UPDATE providers SET is_active = true WHERE id = <provider_id>;
 **Authentication Type**: REST API Key
 
 **Required Credentials**:
+
 - API Key
 - API Endpoint
 
 **Configuration**:
+
 ```json
 {
   "apiKey": "your-api-key",
@@ -261,11 +278,13 @@ UPDATE providers SET is_active = true WHERE id = <provider_id>;
 **Authentication Type**: mTLS (Certificate-based)
 
 **Required Credentials**:
+
 - Client Certificate (.pem)
 - Client Key (.pem)
 - CA Certificate (.pem)
 
 **Configuration**:
+
 ```json
 {
   "certPath": "/path/to/client.pem",
@@ -296,6 +315,7 @@ For each provider integration:
 **Issue**: "Invalid credentials" error
 
 **Solution**:
+
 1. Verify credentials are correct
 2. Check if credentials have expired
 3. Verify IP whitelisting if required
@@ -306,6 +326,7 @@ For each provider integration:
 **Issue**: No transactions returned
 
 **Solution**:
+
 1. Verify date range is correct
 2. Check if transactions exist in provider system
 3. Verify API permissions
@@ -316,6 +337,7 @@ For each provider integration:
 **Issue**: Float balance not updating
 
 **Solution**:
+
 1. Verify float account configuration
 2. Check if account has transactions
 3. Verify API endpoint for balance
@@ -326,6 +348,7 @@ For each provider integration:
 **Issue**: Commissions not calculated correctly
 
 **Solution**:
+
 1. Verify commission rates in database
 2. Check transaction type classification
 3. Verify fee calculations

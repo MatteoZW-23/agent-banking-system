@@ -20,7 +20,10 @@ describe("Commission Service", () => {
       };
 
       const rate = 2.5; // 2.5%
-      const commission = commissionService.calculateCommission(transaction, rate);
+      const commission = commissionService.calculateCommission(
+        transaction,
+        rate
+      );
 
       // Commission = (Amount - Fee) * Rate / 100
       const expected = (1000.0 - 25.0) * (2.5 / 100);
@@ -35,7 +38,10 @@ describe("Commission Service", () => {
       };
 
       const rate = 1.5;
-      const commission = commissionService.calculateCommission(transaction, rate);
+      const commission = commissionService.calculateCommission(
+        transaction,
+        rate
+      );
 
       const expected = 500.0 * (1.5 / 100);
       expect(commission).toBeCloseTo(expected, 2);
@@ -49,7 +55,10 @@ describe("Commission Service", () => {
       };
 
       const rate = 0;
-      const commission = commissionService.calculateCommission(transaction, rate);
+      const commission = commissionService.calculateCommission(
+        transaction,
+        rate
+      );
 
       expect(commission).toBe(0);
     });
@@ -62,7 +71,10 @@ describe("Commission Service", () => {
       };
 
       const rate = 1.0;
-      const commission = commissionService.calculateCommission(transaction, rate);
+      const commission = commissionService.calculateCommission(
+        transaction,
+        rate
+      );
 
       const expected = (100000.0 - 500.0) * (1.0 / 100);
       expect(commission).toBeCloseTo(expected, 2);
@@ -72,9 +84,24 @@ describe("Commission Service", () => {
   describe("Commission Aggregation", () => {
     it("should aggregate commissions by transaction type", () => {
       const transactions = [
-        { amount: 1000.0, fee: 25.0, type: "cash_out" as const, employeeCode: "EMP001" },
-        { amount: 500.0, fee: 10.0, type: "cash_out" as const, employeeCode: "EMP001" },
-        { amount: 2000.0, fee: 50.0, type: "send_money" as const, employeeCode: "EMP001" },
+        {
+          amount: 1000.0,
+          fee: 25.0,
+          type: "cash_out" as const,
+          employeeCode: "EMP001",
+        },
+        {
+          amount: 500.0,
+          fee: 10.0,
+          type: "cash_out" as const,
+          employeeCode: "EMP001",
+        },
+        {
+          amount: 2000.0,
+          fee: 50.0,
+          type: "send_money" as const,
+          employeeCode: "EMP001",
+        },
       ];
 
       const rates = {
@@ -99,7 +126,10 @@ describe("Commission Service", () => {
       ];
 
       const rate = 2.5;
-      const aggregated = commissionService.aggregateByProvider(transactions, rate);
+      const aggregated = commissionService.aggregateByProvider(
+        transactions,
+        rate
+      );
 
       expect(aggregated[1]).toBeCloseTo(
         (1000 - 25) * 0.025 + (2000 - 50) * 0.025,
@@ -141,7 +171,9 @@ describe("Commission Service", () => {
         { employeeCode: "EMP003", totalCommission: 3000.0 },
       ];
 
-      const average = commissions.reduce((sum, c) => sum + c.totalCommission, 0) / commissions.length;
+      const average =
+        commissions.reduce((sum, c) => sum + c.totalCommission, 0) /
+        commissions.length;
 
       expect(average).toBe(2000.0);
     });
@@ -177,7 +209,7 @@ describe("Commission Service", () => {
     it("should accept reasonable commission rates", () => {
       const rates = [0.5, 1.0, 2.5, 5.0, 10.0];
 
-      rates.forEach((rate) => {
+      rates.forEach(rate => {
         expect(commissionService.validateRate(rate)).toBe(true);
       });
     });

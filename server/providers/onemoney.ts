@@ -1,4 +1,10 @@
-import { SoapProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  SoapProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface OneMoneyTransaction {
   txnId: string;
@@ -41,7 +47,7 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
         method: "POST",
         headers: {
           "Content-Type": "text/xml; charset=utf-8",
-          "SOAPAction": "Login",
+          SOAPAction: "Login",
         },
         body: loginXml,
       });
@@ -58,11 +64,16 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
       }
     } catch (error) {
       console.error("[OneMoney] Authentication failed:", error);
-      throw new Error(`OneMoney authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `OneMoney authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.ensureAuthenticated();
 
     try {
@@ -77,7 +88,7 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
           method: "POST",
           headers: {
             "Content-Type": "text/xml; charset=utf-8",
-            "SOAPAction": "GetTransactions",
+            SOAPAction: "GetTransactions",
           },
           body: requestXml,
         });
@@ -90,10 +101,12 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
         return this.parseTransactionsResponse(responseText);
       });
 
-      return response.map((txn) => this.normalizeTransaction(txn));
+      return response.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[OneMoney] Failed to fetch transactions:", error);
-      throw new Error(`OneMoney transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `OneMoney transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -110,7 +123,7 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
           method: "POST",
           headers: {
             "Content-Type": "text/xml; charset=utf-8",
-            "SOAPAction": "GetBalance",
+            SOAPAction: "GetBalance",
           },
           body: requestXml,
         });
@@ -130,7 +143,9 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
       };
     } catch (error) {
       console.error("[OneMoney] Failed to get float balance:", error);
-      throw new Error(`OneMoney float balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `OneMoney float balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -151,9 +166,14 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
     }
   }
 
-  private buildSoapRequest(method: string, params: Record<string, any>): string {
+  private buildSoapRequest(
+    method: string,
+    params: Record<string, any>
+  ): string {
     const paramXml = Object.entries(params)
-      .map(([key, value]) => `<${key}>${this.escapeXml(String(value))}</${key}>`)
+      .map(
+        ([key, value]) => `<${key}>${this.escapeXml(String(value))}</${key}>`
+      )
       .join("");
 
     return `<?xml version="1.0" encoding="utf-8"?>
@@ -171,9 +191,13 @@ export class OneMoneyAdapter extends SoapProviderAdapter {
     return match ? match[1] : null;
   }
 
-  private parseTransactionsResponse(responseXml: string): OneMoneyTransaction[] {
+  private parseTransactionsResponse(
+    responseXml: string
+  ): OneMoneyTransaction[] {
     const transactions: OneMoneyTransaction[] = [];
-    const txnMatches = Array.from(responseXml.matchAll(/<transaction>([\s\S]*?)<\/transaction>/g));
+    const txnMatches = Array.from(
+      responseXml.matchAll(/<transaction>([\s\S]*?)<\/transaction>/g)
+    );
 
     for (const match of txnMatches) {
       const txnXml = match[1];

@@ -12,10 +12,14 @@ describe("SMSAlertService", () => {
         { success: true, messageId: "msg-1" },
         { success: true, messageId: "msg-2" },
       ]),
-      sendSMS: vi.fn().mockResolvedValue({ success: true, messageId: "test-msg" }),
+      sendSMS: vi
+        .fn()
+        .mockResolvedValue({ success: true, messageId: "test-msg" }),
     };
 
-    smsAlertService = new SMSAlertService(mockSmsService as AfricasTalkingSMSService);
+    smsAlertService = new SMSAlertService(
+      mockSmsService as AfricasTalkingSMSService
+    );
   });
 
   describe("configuration", () => {

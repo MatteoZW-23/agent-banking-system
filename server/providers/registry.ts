@@ -1,4 +1,8 @@
-import { ProviderAdapter, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  ProviderAdapter,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 import { EcoCashAdapter } from "./ecocash";
 import { OneMoneyAdapter } from "./onemoney";
 import { InnBucksAdapter } from "./innbucks";
@@ -14,7 +18,13 @@ import { TolaAdapter } from "./tola";
  * Maps provider names/IDs to their corresponding adapter classes
  */
 export class ProviderRegistry {
-  private static adapters: Record<string, new (config: ProviderConfig, credentials: ProviderCredentials) => ProviderAdapter> = {
+  private static adapters: Record<
+    string,
+    new (
+      config: ProviderConfig,
+      credentials: ProviderCredentials
+    ) => ProviderAdapter
+  > = {
     ecocash: EcoCashAdapter,
     onemoney: OneMoneyAdapter,
     innbucks: InnBucksAdapter,
@@ -29,7 +39,11 @@ export class ProviderRegistry {
   /**
    * Get adapter for a specific provider
    */
-  static getAdapter(providerName: string, config: ProviderConfig, credentials: ProviderCredentials): ProviderAdapter {
+  static getAdapter(
+    providerName: string,
+    config: ProviderConfig,
+    credentials: ProviderCredentials
+  ): ProviderAdapter {
     const AdapterClass = this.adapters[providerName.toLowerCase()];
 
     if (!AdapterClass) {
@@ -58,7 +72,10 @@ export class ProviderRegistry {
    */
   static registerAdapter(
     providerName: string,
-    AdapterClass: new (config: ProviderConfig, credentials: ProviderCredentials) => ProviderAdapter
+    AdapterClass: new (
+      config: ProviderConfig,
+      credentials: ProviderCredentials
+    ) => ProviderAdapter
   ): void {
     this.adapters[providerName.toLowerCase()] = AdapterClass;
   }
@@ -71,7 +88,11 @@ export class ProviderFactory {
   /**
    * Create adapter instance for provider
    */
-  static createAdapter(providerName: string, config: ProviderConfig, credentials: ProviderCredentials): ProviderAdapter {
+  static createAdapter(
+    providerName: string,
+    config: ProviderConfig,
+    credentials: ProviderCredentials
+  ): ProviderAdapter {
     return ProviderRegistry.getAdapter(providerName, config, credentials);
   }
 

@@ -1,5 +1,11 @@
 import { getDb } from "../db";
-import { transactions, dailySettlements, alertHistory, alertConfigurations, providers } from "../../drizzle/schema";
+import {
+  transactions,
+  dailySettlements,
+  alertHistory,
+  alertConfigurations,
+  providers,
+} from "../../drizzle/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 
 export interface ReconciliationReport {
@@ -29,7 +35,10 @@ export class ReconciliationEngine {
   /**
    * Run reconciliation for a specific provider on a specific date
    */
-  async reconcileProvider(providerId: number, date: Date): Promise<ReconciliationReport> {
+  async reconcileProvider(
+    providerId: number,
+    date: Date
+  ): Promise<ReconciliationReport> {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
@@ -66,7 +75,10 @@ export class ReconciliationEngine {
 
     // Calculate expected totals from internal ledger
     const totalExpected = internalTxns.reduce((sum, txn) => {
-      const amount = typeof txn.amount === "string" ? parseFloat(txn.amount) : (txn.amount as number);
+      const amount =
+        typeof txn.amount === "string"
+          ? parseFloat(txn.amount)
+          : (txn.amount as number);
       return sum + amount;
     }, 0);
 
@@ -82,20 +94,33 @@ export class ReconciliationEngine {
       )
       .limit(1);
 
-    const totalActual = settlement.length > 0 && settlement[0].actualTotal
-      ? typeof settlement[0].actualTotal === "string"
-        ? parseFloat(settlement[0].actualTotal)
-        : (settlement[0].actualTotal as number)
-      : 0;
+    const totalActual =
+      settlement.length > 0 && settlement[0].actualTotal
+        ? typeof settlement[0].actualTotal === "string"
+          ? parseFloat(settlement[0].actualTotal)
+          : (settlement[0].actualTotal as number)
+        : 0;
 
     const discrepancy = totalActual - totalExpected;
-    const discrepancyPercentage = totalExpected > 0 ? (discrepancy / totalExpected) * 100 : 0;
-    const status = Math.abs(discrepancy) < 0.01 ? "matched" : Math.abs(discrepancyPercentage) > 5 ? "investigating" : "mismatch";
+    const discrepancyPercentage =
+      totalExpected > 0 ? (discrepancy / totalExpected) * 100 : 0;
+    const status =
+      Math.abs(discrepancy) < 0.01
+        ? "matched"
+        : Math.abs(discrepancyPercentage) > 5
+          ? "investigating"
+          : "mismatch";
 
     // Perform transaction matching
-    const matchedCount = internalTxns.filter((txn) => txn.reconciliationStatus === "matched").length;
-    const mismatchCount = internalTxns.filter((txn) => txn.reconciliationStatus === "mismatch").length;
-    const unmatchedCount = internalTxns.filter((txn) => txn.reconciliationStatus === "unreconciled").length;
+    const matchedCount = internalTxns.filter(
+      txn => txn.reconciliationStatus === "matched"
+    ).length;
+    const mismatchCount = internalTxns.filter(
+      txn => txn.reconciliationStatus === "mismatch"
+    ).length;
+    const unmatchedCount = internalTxns.filter(
+      txn => txn.reconciliationStatus === "unreconciled"
+    ).length;
 
     // Build mismatches array
     const mismatches: Array<{
@@ -107,7 +132,10 @@ export class ReconciliationEngine {
 
     for (const txn of internalTxns) {
       if (txn.reconciliationStatus === "mismatch" && txn.providerReference) {
-        const amount = typeof txn.amount === "string" ? parseFloat(txn.amount) : (txn.amount as number);
+        const amount =
+          typeof txn.amount === "string"
+            ? parseFloat(txn.amount)
+            : (txn.amount as number);
         mismatches.push({
           reference: txn.providerReference,
           expected: amount,
@@ -182,7 +210,7 @@ export class ReconciliationEngine {
 
     for (const internalTxn of internalTxns) {
       const externalMatch = externalTxns.find(
-        (ext) => ext.reference === internalTxn.providerReference
+        ext => ext.reference === internalTxn.providerReference
       );
 
       if (!externalMatch) {
@@ -190,12 +218,14 @@ export class ReconciliationEngine {
         continue;
       }
 
-      const internalAmount = typeof internalTxn.amount === "string"
-        ? parseFloat(internalTxn.amount)
-        : (internalTxn.amount as number);
-      const externalAmount = typeof externalMatch.amount === "string"
-        ? parseFloat(externalMatch.amount)
-        : (externalMatch.amount as number);
+      const internalAmount =
+        typeof internalTxn.amount === "string"
+          ? parseFloat(internalTxn.amount)
+          : (internalTxn.amount as number);
+      const externalAmount =
+        typeof externalMatch.amount === "string"
+          ? parseFloat(externalMatch.amount)
+          : (externalMatch.amount as number);
 
       if (Math.abs(internalAmount - externalAmount) < 0.01) {
         matched++;
@@ -279,7 +309,10 @@ export class ReconciliationEngine {
         const report = await this.reconcileProvider(provider.id, date);
         reports.push(report);
       } catch (error) {
-        console.error(`[Reconciliation] Failed to reconcile provider ${provider.id}:`, error);
+        console.error(
+          `[Reconciliation] Failed to reconcile provider ${provider.id}:`,
+          error
+        );
       }
     }
 

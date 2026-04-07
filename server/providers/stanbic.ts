@@ -1,4 +1,8 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+} from "./providerAdapter";
 
 /**
  * Stanbic Bank provider adapter
@@ -9,7 +13,10 @@ export class StanbicAdapter extends RestProviderAdapter {
     console.log("[Stanbic] Authenticating with Stanbic API");
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
     // Implementation would fetch from Stanbic API
     return [];

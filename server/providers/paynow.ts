@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface PaynowTransaction {
   id: string;
@@ -25,16 +31,19 @@ export class PaynowAdapter extends RestProviderAdapter {
   async authenticate(): Promise<void> {
     try {
       await this.retryWithBackoff(async () => {
-        const response = await fetch(`${this.config.apiEndpoint}/api/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            integrationKey: this.credentials.apiKey,
-            integrationId: this.credentials.clientId,
-          }),
-        });
+        const response = await fetch(
+          `${this.config.apiEndpoint}/api/auth/login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              integrationKey: this.credentials.apiKey,
+              integrationId: this.credentials.clientId,
+            }),
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`Paynow authentication failed: ${response.status}`);
@@ -45,11 +54,16 @@ export class PaynowAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[Paynow] Authentication failed:", error);
-      throw new Error(`Paynow authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Paynow authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
@@ -74,10 +88,12 @@ export class PaynowAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.data.map((txn) => this.normalizeTransaction(txn));
+      return response.data.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[Paynow] Failed to fetch transactions:", error);
-      throw new Error(`Paynow transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Paynow transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -86,10 +102,13 @@ export class PaynowAdapter extends RestProviderAdapter {
 
     try {
       const response = await this.retryWithBackoff(async () => {
-        const res = await fetch(`${this.config.apiEndpoint}/api/account/balance`, {
-          method: "GET",
-          headers: this.getDefaultHeaders(),
-        });
+        const res = await fetch(
+          `${this.config.apiEndpoint}/api/account/balance`,
+          {
+            method: "GET",
+            headers: this.getDefaultHeaders(),
+          }
+        );
 
         if (!res.ok) {
           throw new Error(`Failed to get balance: ${res.status}`);
@@ -107,7 +126,9 @@ export class PaynowAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[Paynow] Failed to get balance:", error);
-      throw new Error(`Paynow balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Paynow balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -157,8 +178,13 @@ export class PaynowAdapter extends RestProviderAdapter {
     return mapping[type] || type.toLowerCase();
   }
 
-  protected mapStatus(status: string): "completed" | "pending" | "failed" | "reversed" {
-    const mapping: Record<string, "completed" | "pending" | "failed" | "reversed"> = {
+  protected mapStatus(
+    status: string
+  ): "completed" | "pending" | "failed" | "reversed" {
+    const mapping: Record<
+      string,
+      "completed" | "pending" | "failed" | "reversed"
+    > = {
       SUCCESS: "completed",
       COMPLETED: "completed",
       PENDING: "pending",

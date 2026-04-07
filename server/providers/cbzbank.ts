@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface CBZTransaction {
   id: string;
@@ -47,17 +53,25 @@ export class CBZBankAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[CBZ Bank] Authentication failed:", error);
-      throw new Error(`CBZ Bank authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `CBZ Bank authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
       const response = await this.retryWithBackoff(async () => {
         const url = new URL(`${this.config.apiEndpoint}/transactions`);
-        url.searchParams.append("startDate", fromDate.toISOString().split("T")[0]);
+        url.searchParams.append(
+          "startDate",
+          fromDate.toISOString().split("T")[0]
+        );
         url.searchParams.append("endDate", toDate.toISOString().split("T")[0]);
 
         const res = await fetch(url.toString(), {
@@ -76,10 +90,12 @@ export class CBZBankAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.data.map((txn) => this.normalizeTransaction(txn));
+      return response.data.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[CBZ Bank] Failed to fetch transactions:", error);
-      throw new Error(`CBZ Bank transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `CBZ Bank transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -109,7 +125,9 @@ export class CBZBankAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[CBZ Bank] Failed to get balance:", error);
-      throw new Error(`CBZ Bank balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `CBZ Bank balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -159,8 +177,13 @@ export class CBZBankAdapter extends RestProviderAdapter {
     return mapping[type] || type.toLowerCase();
   }
 
-  protected mapStatus(status: string): "completed" | "pending" | "failed" | "reversed" {
-    const mapping: Record<string, "completed" | "pending" | "failed" | "reversed"> = {
+  protected mapStatus(
+    status: string
+  ): "completed" | "pending" | "failed" | "reversed" {
+    const mapping: Record<
+      string,
+      "completed" | "pending" | "failed" | "reversed"
+    > = {
       SUCCESS: "completed",
       COMPLETED: "completed",
       PENDING: "pending",

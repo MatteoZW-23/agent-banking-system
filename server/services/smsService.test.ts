@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { AfricasTalkingSMSService, SMSMessage, SMSResponse } from "./smsService";
+import {
+  AfricasTalkingSMSService,
+  SMSMessage,
+  SMSResponse,
+} from "./smsService";
 
 describe("AfricasTalkingSMSService", () => {
   let smsService: AfricasTalkingSMSService;
@@ -10,22 +14,26 @@ describe("AfricasTalkingSMSService", () => {
 
   describe("formatPhoneNumber", () => {
     it("should format Zimbabwean phone number with 0 prefix", () => {
-      const formatted = AfricasTalkingSMSService.formatPhoneNumber("0712345678");
+      const formatted =
+        AfricasTalkingSMSService.formatPhoneNumber("0712345678");
       expect(formatted).toBe("+263712345678");
     });
 
     it("should format Zimbabwean phone number with country code", () => {
-      const formatted = AfricasTalkingSMSService.formatPhoneNumber("263712345678");
+      const formatted =
+        AfricasTalkingSMSService.formatPhoneNumber("263712345678");
       expect(formatted).toBe("+263712345678");
     });
 
     it("should keep already formatted international number", () => {
-      const formatted = AfricasTalkingSMSService.formatPhoneNumber("+263712345678");
+      const formatted =
+        AfricasTalkingSMSService.formatPhoneNumber("+263712345678");
       expect(formatted).toBe("+263712345678");
     });
 
     it("should remove formatting characters", () => {
-      const formatted = AfricasTalkingSMSService.formatPhoneNumber("+263 (71) 234-5678");
+      const formatted =
+        AfricasTalkingSMSService.formatPhoneNumber("+263 (71) 234-5678");
       expect(formatted).toBe("+263712345678");
     });
   });

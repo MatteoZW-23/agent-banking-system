@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface EcoCashTokenResponse {
   access_token: string;
@@ -50,7 +56,9 @@ export class EcoCashAdapter extends RestProviderAdapter {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`EcoCash OAuth failed: ${response.status} - ${errorText}`);
+        throw new Error(
+          `EcoCash OAuth failed: ${response.status} - ${errorText}`
+        );
       }
 
       const data = (await response.json()) as EcoCashTokenResponse;
@@ -63,11 +71,16 @@ export class EcoCashAdapter extends RestProviderAdapter {
       this.tokenExpiry = Date.now() + data.expires_in * 1000;
     } catch (error) {
       console.error("[EcoCash] Authentication failed:", error);
-      throw new Error(`EcoCash authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `EcoCash authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.ensureAuthenticated();
 
     try {
@@ -79,14 +92,16 @@ export class EcoCashAdapter extends RestProviderAdapter {
         const res = await fetch(url.toString(), {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${this.accessToken}`,
+            Authorization: `Bearer ${this.accessToken}`,
             "Content-Type": "application/json",
           },
         });
 
         if (!res.ok) {
           const errorText = await res.text();
-          throw new Error(`Failed to fetch transactions: ${res.status} - ${errorText}`);
+          throw new Error(
+            `Failed to fetch transactions: ${res.status} - ${errorText}`
+          );
         }
 
         return (await res.json()) as { transactions: EcoCashTransaction[] };
@@ -97,10 +112,12 @@ export class EcoCashAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.transactions.map((txn) => this.normalizeTransaction(txn));
+      return response.transactions.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[EcoCash] Failed to fetch transactions:", error);
-      throw new Error(`EcoCash transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `EcoCash transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -109,17 +126,22 @@ export class EcoCashAdapter extends RestProviderAdapter {
 
     try {
       const response = await this.retryWithBackoff(async () => {
-        const res = await fetch(`${this.config.apiEndpoint}/agent/float/balance`, {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${this.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const res = await fetch(
+          `${this.config.apiEndpoint}/agent/float/balance`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!res.ok) {
           const errorText = await res.text();
-          throw new Error(`Failed to get float balance: ${res.status} - ${errorText}`);
+          throw new Error(
+            `Failed to get float balance: ${res.status} - ${errorText}`
+          );
         }
 
         return (await res.json()) as EcoCashFloatResponse;
@@ -132,7 +154,9 @@ export class EcoCashAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[EcoCash] Failed to get float balance:", error);
-      throw new Error(`EcoCash float balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `EcoCash float balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

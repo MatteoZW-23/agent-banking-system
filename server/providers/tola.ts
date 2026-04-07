@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 
 interface TolaTransaction {
   id: string;
@@ -36,7 +42,9 @@ export class TolaAdapter extends RestProviderAdapter {
         });
 
         if (!response.ok) {
-          throw new Error(`Tola Mobile authentication failed: ${response.status}`);
+          throw new Error(
+            `Tola Mobile authentication failed: ${response.status}`
+          );
         }
 
         const data = (await response.json()) as { token: string };
@@ -44,17 +52,25 @@ export class TolaAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[Tola Mobile] Authentication failed:", error);
-      throw new Error(`Tola Mobile authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Tola Mobile authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
       const response = await this.retryWithBackoff(async () => {
         const url = new URL(`${this.config.apiEndpoint}/api/v2/transactions`);
-        url.searchParams.append("startDate", fromDate.toISOString().split("T")[0]);
+        url.searchParams.append(
+          "startDate",
+          fromDate.toISOString().split("T")[0]
+        );
         url.searchParams.append("endDate", toDate.toISOString().split("T")[0]);
 
         const res = await fetch(url.toString(), {
@@ -73,10 +89,12 @@ export class TolaAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.data.map((txn) => this.normalizeTransaction(txn));
+      return response.data.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[Tola Mobile] Failed to fetch transactions:", error);
-      throw new Error(`Tola Mobile transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Tola Mobile transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -85,10 +103,13 @@ export class TolaAdapter extends RestProviderAdapter {
 
     try {
       const response = await this.retryWithBackoff(async () => {
-        const res = await fetch(`${this.config.apiEndpoint}/api/v2/wallet/balance`, {
-          method: "GET",
-          headers: this.getDefaultHeaders(),
-        });
+        const res = await fetch(
+          `${this.config.apiEndpoint}/api/v2/wallet/balance`,
+          {
+            method: "GET",
+            headers: this.getDefaultHeaders(),
+          }
+        );
 
         if (!res.ok) {
           throw new Error(`Failed to get balance: ${res.status}`);
@@ -106,7 +127,9 @@ export class TolaAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[Tola Mobile] Failed to get balance:", error);
-      throw new Error(`Tola Mobile balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Tola Mobile balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -155,8 +178,13 @@ export class TolaAdapter extends RestProviderAdapter {
     return mapping[type] || type.toLowerCase();
   }
 
-  protected mapStatus(status: string): "completed" | "pending" | "failed" | "reversed" {
-    const mapping: Record<string, "completed" | "pending" | "failed" | "reversed"> = {
+  protected mapStatus(
+    status: string
+  ): "completed" | "pending" | "failed" | "reversed" {
+    const mapping: Record<
+      string,
+      "completed" | "pending" | "failed" | "reversed"
+    > = {
       SUCCESS: "completed",
       COMPLETED: "completed",
       PENDING: "pending",

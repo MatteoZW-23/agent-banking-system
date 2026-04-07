@@ -1,4 +1,10 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance, ProviderConfig, ProviderCredentials } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+  ProviderConfig,
+  ProviderCredentials,
+} from "./providerAdapter";
 import * as fs from "fs";
 import * as https from "https";
 
@@ -61,17 +67,25 @@ export class ZBBankAdapter extends RestProviderAdapter {
       });
     } catch (error) {
       console.error("[ZB Bank] Authentication failed:", error);
-      throw new Error(`ZB Bank authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `ZB Bank authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
 
     try {
       const response = await this.retryWithBackoff(async () => {
         const url = new URL(`${this.config.apiEndpoint}/transactions`);
-        url.searchParams.append("startDate", fromDate.toISOString().split("T")[0]);
+        url.searchParams.append(
+          "startDate",
+          fromDate.toISOString().split("T")[0]
+        );
         url.searchParams.append("endDate", toDate.toISOString().split("T")[0]);
 
         const res = await fetch(url.toString(), {
@@ -90,10 +104,12 @@ export class ZBBankAdapter extends RestProviderAdapter {
         return [];
       }
 
-      return response.transactions.map((txn) => this.normalizeTransaction(txn));
+      return response.transactions.map(txn => this.normalizeTransaction(txn));
     } catch (error) {
       console.error("[ZB Bank] Failed to fetch transactions:", error);
-      throw new Error(`ZB Bank transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `ZB Bank transaction fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -123,7 +139,9 @@ export class ZBBankAdapter extends RestProviderAdapter {
       };
     } catch (error) {
       console.error("[ZB Bank] Failed to get balance:", error);
-      throw new Error(`ZB Bank balance fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `ZB Bank balance fetch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

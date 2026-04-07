@@ -5,7 +5,13 @@ import { eq, and, gte, lte } from "drizzle-orm";
 
 export interface TransactionAnalysisResult {
   flagged: boolean;
-  flagType: "suspicious_pattern" | "unusual_amount" | "timing_anomaly" | "duplicate_risk" | "fraud_risk" | "other";
+  flagType:
+    | "suspicious_pattern"
+    | "unusual_amount"
+    | "timing_anomaly"
+    | "duplicate_risk"
+    | "fraud_risk"
+    | "other";
   riskScore: number;
   reason: string;
   llmAnalysis: Record<string, any>;
@@ -15,7 +21,9 @@ export class TransactionAnalysisService {
   /**
    * Analyze a transaction for suspicious patterns using LLM
    */
-  async analyzeTransaction(transactionId: number): Promise<TransactionAnalysisResult> {
+  async analyzeTransaction(
+    transactionId: number
+  ): Promise<TransactionAnalysisResult> {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
@@ -41,8 +49,33 @@ export class TransactionAnalysisService {
           .limit(100)
       : [];
 
+    // 0. Deterministic KYC Check (Global Standard: Block/Flag > $500 without ID)
+    const amountVal = typeof transaction.amount === "string" ? parseFloat(transaction.amount) : (transaction.amount as number);
+    if (amountVal > 500 && !transaction.customerNationalId) {
+      await db.insert(transactionFlags).values({
+        transactionId,
+        flagType: "kyc_missing",
+        riskScore: 1.0,
+        reason: `COMPLIANCE BREACH: Transaction of ${amountVal} processed without valid Customer ID record.`,
+        llmAnalysis: { manual_flag: true, rule: "KYC_THRESHOLD_500" },
+        status: "flagged",
+        createdAt: new Date(),
+      });
+      
+      return {
+        flagged: true,
+        flagType: "kyc_missing",
+        riskScore: 1.0,
+        reason: "Missing Customer Identification for high-value transaction.",
+        llmAnalysis: { rule: "KYC_MISSING" }
+      };
+    }
+
     // Prepare analysis prompt
-    const analysisPrompt = this.buildAnalysisPrompt(transaction, employeeTransactions);
+    const analysisPrompt = this.buildAnalysisPrompt(
+      transaction,
+      employeeTransactions
+    );
 
     try {
       // Call LLM for analysis
@@ -50,7 +83,8 @@ export class TransactionAnalysisService {
         messages: [
           {
             role: "system",
-            content: "You are a financial fraud detection expert analyzing payment transactions. Analyze the provided transaction for suspicious patterns, unusual amounts, timing anomalies, and other fraud indicators.",
+            content:
+              "You are a financial fraud detection expert analyzing payment transactions. Analyze the provided transaction for suspicious patterns, unusual amounts, timing anomalies, and other fraud indicators.",
           },
           {
             role: "user",
@@ -81,7 +115,13 @@ export class TransactionAnalysisService {
                 reason: { type: "string" },
                 indicators: { type: "array", items: { type: "string" } },
               },
-              required: ["flagged", "flagType", "riskScore", "reason", "indicators"],
+              required: [
+                "flagged",
+                "flagType",
+                "riskScore",
+                "reason",
+                "indicators",
+              ],
               additionalProperties: false,
             },
           },
@@ -93,7 +133,10 @@ export class TransactionAnalysisService {
         throw new Error("No response from LLM");
       }
 
-      const analysisText = typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent);
+      const analysisText =
+        typeof analysisContent === "string"
+          ? analysisContent
+          : JSON.stringify(analysisContent);
       const analysis = JSON.parse(analysisText);
 
       // Store flag if transaction is flagged
@@ -132,7 +175,10 @@ export class TransactionAnalysisService {
   /**
    * Batch analyze transactions for a date range
    */
-  async analyzeTransactionsBatch(fromDate: Date, toDate: Date): Promise<TransactionAnalysisResult[]> {
+  async analyzeTransactionsBatch(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<TransactionAnalysisResult[]> {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
 
@@ -155,7 +201,10 @@ export class TransactionAnalysisService {
         const result = await this.analyzeTransaction(txn.id);
         results.push(result);
       } catch (error) {
-        console.error(`[TransactionAnalysis] Failed to analyze transaction ${txn.id}:`, error);
+        console.error(
+          `[TransactionAnalysis] Failed to analyze transaction ${txn.id}:`,
+          error
+        );
       }
     }
 
@@ -165,26 +214,38 @@ export class TransactionAnalysisService {
   /**
    * Build analysis prompt with transaction and historical context
    */
-  private buildAnalysisPrompt(transaction: any, employeeTransactions: any[]): string {
-    const amount = typeof transaction.amount === "string"
-      ? parseFloat(transaction.amount)
-      : (transaction.amount as number);
-    const fee = typeof transaction.fee === "string"
-      ? parseFloat(transaction.fee)
-      : (transaction.fee as number);
+  private buildAnalysisPrompt(
+    transaction: any,
+    employeeTransactions: any[]
+  ): string {
+    const amount =
+      typeof transaction.amount === "string"
+        ? parseFloat(transaction.amount)
+        : (transaction.amount as number);
+    const fee =
+      typeof transaction.fee === "string"
+        ? parseFloat(transaction.fee)
+        : (transaction.fee as number);
 
     // Calculate statistics from employee history
     const amounts = employeeTransactions
-      .map((t) => typeof t.amount === "string" ? parseFloat(t.amount) : (t.amount as number))
-      .filter((a) => !isNaN(a));
+      .map(t =>
+        typeof t.amount === "string"
+          ? parseFloat(t.amount)
+          : (t.amount as number)
+      )
+      .filter(a => !isNaN(a));
 
-    const avgAmount = amounts.length > 0 ? amounts.reduce((a, b) => a + b, 0) / amounts.length : 0;
+    const avgAmount =
+      amounts.length > 0
+        ? amounts.reduce((a, b) => a + b, 0) / amounts.length
+        : 0;
     const maxAmount = amounts.length > 0 ? Math.max(...amounts) : 0;
     const minAmount = amounts.length > 0 ? Math.min(...amounts) : 0;
 
     // Count transaction types
     const typeCount: Record<string, number> = {};
-    employeeTransactions.forEach((t) => {
+    employeeTransactions.forEach(t => {
       typeCount[t.type] = (typeCount[t.type] || 0) + 1;
     });
 

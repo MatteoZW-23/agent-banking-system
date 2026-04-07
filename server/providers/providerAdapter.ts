@@ -61,7 +61,10 @@ export abstract class ProviderAdapter {
   /**
    * Fetch transactions for a date range
    */
-  abstract fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]>;
+  abstract fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]>;
 
   /**
    * Get current float balance
@@ -95,17 +98,17 @@ export abstract class ProviderAdapter {
    */
   protected mapTransactionType(type: string): string {
     const typeMap: Record<string, string> = {
-      "cash_out": "cash_out",
-      "cash_in": "cash_in",
-      "send_money": "send_money",
-      "receive_money": "receive_money",
-      "bill_payment": "bill_payment",
-      "airtime": "airtime",
-      "data_bundle": "data_bundle",
-      "bank_transfer": "bank_transfer",
-      "salary_disbursement": "salary_disbursement",
-      "float_purchase": "float_purchase",
-      "float_redemption": "float_redemption",
+      cash_out: "cash_out",
+      cash_in: "cash_in",
+      send_money: "send_money",
+      receive_money: "receive_money",
+      bill_payment: "bill_payment",
+      airtime: "airtime",
+      data_bundle: "data_bundle",
+      bank_transfer: "bank_transfer",
+      salary_disbursement: "salary_disbursement",
+      float_purchase: "float_purchase",
+      float_redemption: "float_redemption",
     };
     return typeMap[type] || "other";
   }
@@ -113,17 +116,22 @@ export abstract class ProviderAdapter {
   /**
    * Map provider-specific status to unified status
    */
-  protected mapStatus(status: string): "completed" | "pending" | "failed" | "reversed" {
-    const statusMap: Record<string, "completed" | "pending" | "failed" | "reversed"> = {
-      "success": "completed",
-      "completed": "completed",
-      "successful": "completed",
-      "pending": "pending",
-      "processing": "pending",
-      "failed": "failed",
-      "error": "failed",
-      "reversed": "reversed",
-      "refunded": "reversed",
+  protected mapStatus(
+    status: string
+  ): "completed" | "pending" | "failed" | "reversed" {
+    const statusMap: Record<
+      string,
+      "completed" | "pending" | "failed" | "reversed"
+    > = {
+      success: "completed",
+      completed: "completed",
+      successful: "completed",
+      pending: "pending",
+      processing: "pending",
+      failed: "failed",
+      error: "failed",
+      reversed: "reversed",
+      refunded: "reversed",
     };
     return statusMap[status.toLowerCase()] || "pending";
   }
@@ -145,7 +153,7 @@ export abstract class ProviderAdapter {
         lastError = error as Error;
         if (attempt < maxRetries - 1) {
           const delay = baseDelay * Math.pow(2, attempt);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
@@ -188,8 +196,14 @@ export abstract class RestProviderAdapter extends ProviderAdapter {
 
     if (this.config.authType === "apikey" && this.credentials.apiKey) {
       headers["Authorization"] = `Bearer ${this.credentials.apiKey}`;
-    } else if (this.config.authType === "basic" && this.credentials.apiKey && this.credentials.apiSecret) {
-      const encoded = Buffer.from(`${this.credentials.apiKey}:${this.credentials.apiSecret}`).toString("base64");
+    } else if (
+      this.config.authType === "basic" &&
+      this.credentials.apiKey &&
+      this.credentials.apiSecret
+    ) {
+      const encoded = Buffer.from(
+        `${this.credentials.apiKey}:${this.credentials.apiSecret}`
+      ).toString("base64");
       headers["Authorization"] = `Basic ${encoded}`;
     }
 
@@ -201,7 +215,10 @@ export abstract class RestProviderAdapter extends ProviderAdapter {
  * SOAP-based provider adapter
  */
 export abstract class SoapProviderAdapter extends ProviderAdapter {
-  protected async makeSoapRequest<T>(methodName: string, params: Record<string, any>): Promise<T> {
+  protected async makeSoapRequest<T>(
+    methodName: string,
+    params: Record<string, any>
+  ): Promise<T> {
     // SOAP implementation would go here
     // This is a placeholder for SOAP-based providers like OneMoney
     throw new Error("SOAP adapter not fully implemented");
@@ -215,7 +232,10 @@ export class ProviderAdapterFactory {
   static createAdapter(
     config: ProviderConfig,
     credentials: ProviderCredentials,
-    adapterClass: new (config: ProviderConfig, credentials: ProviderCredentials) => ProviderAdapter
+    adapterClass: new (
+      config: ProviderConfig,
+      credentials: ProviderCredentials
+    ) => ProviderAdapter
   ): ProviderAdapter {
     return new adapterClass(config, credentials);
   }

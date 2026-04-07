@@ -32,6 +32,25 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Branches table - tracks physical locations/hubs of operations
+ */
+export const branches = mysqlTable("branches", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  region: varchar("region", { length: 100 }),
+  managerName: varchar("manager_name", { length: 100 }),
+  contactPhone: varchar("contact_phone", { length: 20 }),
+  status: mysqlEnum("status", ["active", "closed", "maintenance"]).default(
+    "active"
+  ),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Branch = typeof branches.$inferSelect;
+export type InsertBranch = typeof branches.$inferInsert;
+
+/**
  * Employees table - tracks agents and their unique identifiers across platforms
  */
 export const employees = mysqlTable(
@@ -39,15 +58,23 @@ export const employees = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(),
+    branchId: int("branch_id").references(() => branches.id),
     name: varchar("name", { length: 100 }).notNull(),
     email: varchar("email", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
-    status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active"),
+    location: varchar("location", { length: 255 }), // Physical worksite/address
+    status: mysqlEnum("status", ["active", "inactive", "suspended"]).default(
+      "active"
+    ),
+    role: mysqlEnum("role", ["agent", "supervisor", "manager"]).default(
+      "agent"
+    ),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
-  (table) => ({
+  table => ({
     uniqueCodeIdx: index("idx_employees_unique_code").on(table.uniqueCode),
+    branchIdIdx: index("idx_employees_branch").on(table.branchId),
   })
 );
 
@@ -62,10 +89,21 @@ export const providers = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     name: varchar("name", { length: 100 }).notNull().unique(),
-    category: mysqlEnum("category", ["mobile_money", "bank", "fintech", "aggregator"]).notNull(),
+    category: mysqlEnum("category", [
+      "mobile_money",
+      "bank",
+      "fintech",
+      "aggregator",
+    ]).notNull(),
     agentServiceName: varchar("agent_service_name", { length: 100 }),
     apiEndpoint: varchar("api_endpoint", { length: 255 }),
-    authType: mysqlEnum("auth_type", ["oauth2", "apikey", "basic", "mtls", "none"]).notNull(),
+    authType: mysqlEnum("auth_type", [
+      "oauth2",
+      "apikey",
+      "basic",
+      "mtls",
+      "none",
+    ]).notNull(),
     authConfig: json("auth_config"),
     webhookUrl: varchar("webhook_url", { length: 255 }),
     settlementAccount: varchar("settlement_account", { length: 50 }),
@@ -73,7 +111,7 @@ export const providers = mysqlTable(
     lastSyncAt: timestamp("last_sync_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
+  table => ({
     nameIdx: index("idx_providers_name").on(table.name),
     categoryIdx: index("idx_providers_category").on(table.category),
   })
@@ -89,6 +127,7 @@ export const agentRegistrations = mysqlTable(
   "agent_registrations",
   {
     id: int("id").autoincrement().primaryKey(),
+    employeeId: int("employee_id").references(() => employees.id),
     providerId: int("provider_id").notNull(),
     agentCode: varchar("agent_code", { length: 50 }).notNull(),
     merchantId: varchar("merchant_id", { length: 50 }),
@@ -99,9 +138,13 @@ export const agentRegistrations = mysqlTable(
     isPrimary: boolean("is_primary").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
+  table => ({
+    employeeIdIdx: index("idx_agent_reg_employee").on(table.employeeId),
     providerIdIdx: index("idx_agent_reg_provider").on(table.providerId),
-    uniqueProviderAgent: unique("unique_provider_agent").on(table.providerId, table.agentCode),
+    uniqueProviderAgent: unique("unique_provider_agent").on(
+      table.providerId,
+      table.agentCode
+    ),
   })
 );
 
@@ -118,11 +161,13 @@ export const transactions = mysqlTable(
     providerId: int("provider_id").notNull(),
     agentRegistrationId: int("agent_registration_id"),
     employeeCode: varchar("employee_code", { length: 20 }),
-    
+
     // Transaction identifiers
     providerReference: varchar("provider_reference", { length: 200 }).notNull(),
-    internalReference: varchar("internal_reference", { length: 100 }).notNull().unique(),
-    
+    internalReference: varchar("internal_reference", { length: 100 })
+      .notNull()
+      .unique(),
+
     // Transaction details
     type: mysqlEnum("type", [
       "cash_in",
@@ -138,38 +183,57 @@ export const transactions = mysqlTable(
       "float_purchase",
       "float_redemption",
     ]).notNull(),
-    
+
     amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
     fee: decimal("fee", { precision: 15, scale: 2 }).default("0"),
     tax: decimal("tax", { precision: 15, scale: 2 }).default("0"),
     netAmount: decimal("net_amount", { precision: 15, scale: 2 }),
-    
+
     // Customer info (masked for privacy)
     customerPhone: varchar("customer_phone", { length: 15 }),
     customerNationalId: varchar("customer_national_id", { length: 20 }),
     customerName: varchar("customer_name", { length: 100 }),
-    
+
     // Status tracking
-    status: mysqlEnum("status", ["pending", "processing", "completed", "failed", "reversed", "disputed"]).default("pending"),
+    status: mysqlEnum("status", [
+      "pending",
+      "processing",
+      "completed",
+      "failed",
+      "reversed",
+      "disputed",
+    ]).default("pending"),
     failureReason: text("failure_reason"),
-    
+
     // Reconciliation flags
-    reconciliationStatus: mysqlEnum("reconciliation_status", ["unreconciled", "matched", "mismatch", "investigating"]).default("unreconciled"),
-    
+    reconciliationStatus: mysqlEnum("reconciliation_status", [
+      "unreconciled",
+      "matched",
+      "mismatch",
+      "investigating",
+    ]).default("unreconciled"),
+
     // Timestamps
     transactionTime: timestamp("transaction_time").notNull(),
     providerProcessedAt: timestamp("provider_processed_at"),
     syncedAt: timestamp("synced_at").defaultNow(),
-    
+
     // Metadata
     metadata: json("metadata"),
   },
-  (table) => ({
+  table => ({
     providerIdIdx: index("idx_transactions_provider").on(table.providerId),
     employeeCodeIdx: index("idx_transactions_employee").on(table.employeeCode),
-    transactionTimeIdx: index("idx_transactions_time").on(table.transactionTime),
-    reconStatusIdx: index("idx_transactions_recon_status").on(table.reconciliationStatus),
-    uniqueProviderRef: unique("unique_provider_ref").on(table.providerId, table.providerReference),
+    transactionTimeIdx: index("idx_transactions_time").on(
+      table.transactionTime
+    ),
+    reconStatusIdx: index("idx_transactions_recon_status").on(
+      table.reconciliationStatus
+    ),
+    uniqueProviderRef: unique("unique_provider_ref").on(
+      table.providerId,
+      table.providerReference
+    ),
   })
 );
 
@@ -185,16 +249,25 @@ export const providerFloats = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     providerId: int("provider_id").notNull(),
     agentRegistrationId: int("agent_registration_id"),
-    openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).notNull(),
-    currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).notNull(),
-    minimumThreshold: decimal("minimum_threshold", { precision: 15, scale: 2 }).default("0"),
+    openingBalance: decimal("opening_balance", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    currentBalance: decimal("current_balance", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    minimumThreshold: decimal("minimum_threshold", {
+      precision: 15,
+      scale: 2,
+    }).default("0"),
     maximumThreshold: decimal("maximum_threshold", { precision: 15, scale: 2 }),
     lastReconciledAt: timestamp("last_reconciled_at"),
     reconciledBy: int("reconciled_by"),
     notes: text("notes"),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },
-  (table) => ({
+  table => ({
     providerIdIdx: index("idx_floats_provider").on(table.providerId),
     agentRegIdIdx: index("idx_floats_agent_reg").on(table.agentRegistrationId),
   })
@@ -202,6 +275,39 @@ export const providerFloats = mysqlTable(
 
 export type ProviderFloat = typeof providerFloats.$inferSelect;
 export type InsertProviderFloat = typeof providerFloats.$inferInsert;
+
+/**
+ * Float Requests - tracks worker requests for more floating capital
+ */
+export const floatRequests = mysqlTable(
+  "float_requests",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    employeeId: int("employee_id").notNull(),
+    providerId: int("provider_id").notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    status: mysqlEnum("status", [
+      "pending",
+      "approved",
+      "declined",
+      "transferred",
+    ]).default("pending"),
+    requestTime: timestamp("request_time").defaultNow(),
+    processedTime: timestamp("processed_time"),
+    processedBy: int("processed_by"),
+    workerNotes: text("worker_notes"),
+    adminNotes: text("admin_notes"),
+    transactionReference: varchar("transaction_reference", { length: 255 }), // Bank/Momo transfer Ref
+  },
+  table => ({
+    employeeIdIdx: index("idx_float_req_employee").on(table.employeeId),
+    providerIdIdx: index("idx_float_req_provider").on(table.providerId),
+    statusIdx: index("idx_float_req_status").on(table.status),
+  })
+);
+
+export type FloatRequest = typeof floatRequests.$inferSelect;
+export type InsertFloatRequest = typeof floatRequests.$inferInsert;
 
 /**
  * Commission structures - flexible commission rules per provider and transaction type
@@ -213,21 +319,38 @@ export const commissionStructures = mysqlTable(
     providerId: int("provider_id").notNull(),
     transactionType: varchar("transaction_type", { length: 30 }),
     minAmount: decimal("min_amount", { precision: 15, scale: 2 }).default("0"),
-    maxAmount: decimal("max_amount", { precision: 15, scale: 2 }).default("999999999"),
-    commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }),
-    commissionFixed: decimal("commission_fixed", { precision: 15, scale: 2 }).default("0"),
+    maxAmount: decimal("max_amount", { precision: 15, scale: 2 }).default(
+      "999999999"
+    ),
+    commissionPercentage: decimal("commission_percentage", {
+      precision: 5,
+      scale: 2,
+    }),
+    commissionFixed: decimal("commission_fixed", {
+      precision: 15,
+      scale: 2,
+    }).default("0"),
+    payoutFrequency: mysqlEnum("payout_frequency", [
+      "instant",
+      "weekly",
+      "bi_weekly",
+      "monthly",
+    ]).default("instant"),
     effectiveFrom: date("effective_from").notNull(),
     effectiveTo: date("effective_to"),
     isActive: boolean("is_active").default(true),
   },
-  (table) => ({
+  table => ({
     providerIdIdx: index("idx_commission_provider").on(table.providerId),
-    effectiveFromIdx: index("idx_commission_effective_from").on(table.effectiveFrom),
+    effectiveFromIdx: index("idx_commission_effective_from").on(
+      table.effectiveFrom
+    ),
   })
 );
 
 export type CommissionStructure = typeof commissionStructures.$inferSelect;
-export type InsertCommissionStructure = typeof commissionStructures.$inferInsert;
+export type InsertCommissionStructure =
+  typeof commissionStructures.$inferInsert;
 
 /**
  * Daily settlements - tracks daily reconciliation per provider
@@ -238,16 +361,27 @@ export const dailySettlements = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     providerId: int("provider_id").notNull(),
     settlementDate: date("settlement_date").notNull(),
-    expectedTotal: decimal("expected_total", { precision: 15, scale: 2 }).notNull(),
+    expectedTotal: decimal("expected_total", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
     actualTotal: decimal("actual_total", { precision: 15, scale: 2 }),
     discrepancy: decimal("discrepancy", { precision: 15, scale: 2 }),
     bankReference: varchar("bank_reference", { length: 100 }),
     settledAt: timestamp("settled_at"),
-    status: mysqlEnum("status", ["pending", "completed", "failed", "investigating"]).default("pending"),
+    status: mysqlEnum("status", [
+      "pending",
+      "completed",
+      "failed",
+      "investigating",
+    ]).default("pending"),
     notes: text("notes"),
   },
-  (table) => ({
-    providerDateIdx: unique("unique_provider_settlement_date").on(table.providerId, table.settlementDate),
+  table => ({
+    providerDateIdx: unique("unique_provider_settlement_date").on(
+      table.providerId,
+      table.settlementDate
+    ),
     providerIdIdx: index("idx_settlement_provider").on(table.providerId),
     settlementDateIdx: index("idx_settlement_date").on(table.settlementDate),
   })
@@ -257,6 +391,35 @@ export type DailySettlement = typeof dailySettlements.$inferSelect;
 export type InsertDailySettlement = typeof dailySettlements.$inferInsert;
 
 /**
+ * Commission ledger - tracks earned vs disbursed commissions per employee
+ */
+export const commissionLedger = mysqlTable(
+  "commission_ledger",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    employeeId: int("employee_id").notNull(),
+    providerId: int("provider_id").notNull(),
+    transactionId: int("transaction_id"), // Null for bulk payouts
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    type: mysqlEnum("type", ["earning", "disbursement", "shortage_penalty"]).notNull(),
+    status: mysqlEnum("status", ["pending", "cleared", "failed"]).default(
+      "pending"
+    ),
+    earnedAt: timestamp("earned_at").defaultNow(),
+    payoutDate: date("payout_date"),
+    payoutReference: varchar("payout_reference", { length: 255 }),
+  },
+  table => ({
+    employeeIdIdx: index("idx_comm_ledger_employee").on(table.employeeId),
+    providerIdIdx: index("idx_comm_ledger_provider").on(table.providerId),
+    typeIdx: index("idx_comm_ledger_type").on(table.type),
+  })
+);
+
+export type CommissionLedger = typeof commissionLedger.$inferSelect;
+export type InsertCommissionLedger = typeof commissionLedger.$inferInsert;
+
+/**
  * Transaction flags - LLM-flagged suspicious transactions
  */
 export const transactionFlags = mysqlTable(
@@ -264,16 +427,29 @@ export const transactionFlags = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     transactionId: int("transaction_id").notNull(),
-    flagType: mysqlEnum("flag_type", ["suspicious_pattern", "unusual_amount", "timing_anomaly", "duplicate_risk", "fraud_risk", "other"]).notNull(),
+    flagType: mysqlEnum("flag_type", [
+      "suspicious_pattern",
+      "unusual_amount",
+      "timing_anomaly",
+      "duplicate_risk",
+      "fraud_risk",
+      "kyc_missing",
+      "other",
+    ]).notNull(),
     riskScore: decimal("risk_score", { precision: 3, scale: 2 }),
     reason: text("reason").notNull(),
     llmAnalysis: json("llm_analysis"),
-    status: mysqlEnum("status", ["flagged", "reviewed", "resolved", "false_positive"]).default("flagged"),
+    status: mysqlEnum("status", [
+      "flagged",
+      "reviewed",
+      "resolved",
+      "false_positive",
+    ]).default("flagged"),
     reviewedBy: int("reviewed_by"),
     reviewedAt: timestamp("reviewed_at"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => ({
+  table => ({
     transactionIdIdx: index("idx_flags_transaction").on(table.transactionId),
     flagTypeIdx: index("idx_flags_type").on(table.flagType),
     statusIdx: index("idx_flags_status").on(table.status),
@@ -290,16 +466,27 @@ export const alertConfigurations = mysqlTable(
   "alert_configurations",
   {
     id: int("id").autoincrement().primaryKey(),
-    alertType: mysqlEnum("alert_type", ["discrepancy", "low_float", "failed_reconciliation", "suspicious_transaction", "high_commission", "other"]).notNull(),
+    alertType: mysqlEnum("alert_type", [
+      "discrepancy",
+      "low_float",
+      "failed_reconciliation",
+      "suspicious_transaction",
+      "high_commission",
+      "other",
+    ]).notNull(),
     providerId: int("provider_id"),
     threshold: decimal("threshold", { precision: 15, scale: 2 }),
-    thresholdUnit: mysqlEnum("threshold_unit", ["amount", "percentage", "count"]),
+    thresholdUnit: mysqlEnum("threshold_unit", [
+      "amount",
+      "percentage",
+      "count",
+    ]),
     isActive: boolean("is_active").default(true),
     notificationChannels: json("notification_channels"), // SMS, email, webhook
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   },
-  (table) => ({
+  table => ({
     alertTypeIdx: index("idx_alert_config_type").on(table.alertType),
     providerIdIdx: index("idx_alert_config_provider").on(table.providerId),
   })
@@ -320,24 +507,115 @@ export const alertHistory = mysqlTable(
     transactionId: int("transaction_id"),
     title: varchar("title", { length: 255 }).notNull(),
     message: text("message").notNull(),
-    severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).default("medium"),
-    status: mysqlEnum("status", ["triggered", "acknowledged", "resolved", "dismissed"]).default("triggered"),
+    severity: mysqlEnum("severity", [
+      "low",
+      "medium",
+      "high",
+      "critical",
+    ]).default("medium"),
+    status: mysqlEnum("status", [
+      "triggered",
+      "acknowledged",
+      "resolved",
+      "dismissed",
+    ]).default("triggered"),
     acknowledgedBy: int("acknowledged_by"),
     acknowledgedAt: timestamp("acknowledged_at"),
     triggeredAt: timestamp("triggered_at").defaultNow(),
     metadata: json("metadata"),
   },
-  (table) => ({
+  table => ({
     alertConfigIdIdx: index("idx_alert_history_config").on(table.alertConfigId),
     providerIdIdx: index("idx_alert_history_provider").on(table.providerId),
-    transactionIdIdx: index("idx_alert_history_transaction").on(table.transactionId),
+    transactionIdIdx: index("idx_alert_history_transaction").on(
+      table.transactionId
+    ),
     statusIdx: index("idx_alert_history_status").on(table.status),
-    triggeredAtIdx: index("idx_alert_history_triggered_at").on(table.triggeredAt),
+    triggeredAtIdx: index("idx_alert_history_triggered_at").on(
+      table.triggeredAt
+    ),
   })
 );
 
 export type AlertHistory = typeof alertHistory.$inferSelect;
 export type InsertAlertHistory = typeof alertHistory.$inferInsert;
+
+/**
+ * Workforce Check-ins - tracks daily opening/closing cash positions for agents
+ */
+export const checkIns = mysqlTable(
+  "check_ins",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    employeeId: int("employee_id").notNull(),
+    branchId: int("branch_id"),
+
+    // Financial Snapshots
+    openingCash: decimal("opening_cash", { precision: 15, scale: 2 }),
+    closingCash: decimal("closing_cash", { precision: 15, scale: 2 }),
+    openingLineBalances: json("opening_line_balances"), // JSON map of providerId -> amount
+    closingLineBalances: json("closing_line_balances"), // JSON map of providerId -> amount
+
+    // Expected values (calculated by system)
+    expectedClosingCash: decimal("expected_closing_cash", {
+      precision: 15,
+      scale: 2,
+    }),
+    expectedClosingLineBalances: json("expected_closing_line_balances"),
+    discrepancyAmount: decimal("discrepancy_amount", {
+      precision: 15,
+      scale: 2,
+    }).default("0"),
+
+    // Temporal data
+    checkInTime: timestamp("check_in_time").defaultNow(),
+    checkOutTime: timestamp("check_out_time"),
+
+    // Status & Validation
+    status: mysqlEnum("status", [
+      "pending_adjustment",
+      "verified",
+      "discrepancy",
+    ]).default("verified"),
+    notes: text("notes"),
+    metadata: json("metadata"), // Can include GPS coordinates, device ID
+  },
+  table => ({
+    employeeDateIdx: index("idx_checkin_employee").on(table.employeeId),
+    branchIdIdx: index("idx_checkin_branch").on(table.branchId),
+    checkInTimeIdx: index("idx_checkin_time").on(table.checkInTime),
+  })
+);
+
+export type CheckIn = typeof checkIns.$inferSelect;
+export type InsertCheckIn = typeof checkIns.$inferInsert;
+
+/**
+ * Worker Balance Snapshots - tracks mid-shift updates of cash and floats
+ */
+export const workerBalanceSnapshots = mysqlTable(
+  "worker_balance_snapshots",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    checkInId: int("check_in_id").notNull(),
+    employeeId: int("employee_id").notNull(),
+
+    // Updates
+    cashAmount: decimal("cash_amount", { precision: 15, scale: 2 }),
+    floatBalances: json("float_balances"), // JSON map of providerId -> amount
+    updateReason: varchar("update_reason", { length: 255 }), // e.g. "After big cash-out"
+
+    timestamp: timestamp("timestamp").defaultNow(),
+  },
+  table => ({
+    checkInIdIdx: index("idx_balance_snapshot_checkin").on(table.checkInId),
+    employeeIdIdx: index("idx_balance_snapshot_employee").on(table.employeeId),
+  })
+);
+
+export type WorkerBalanceSnapshot = typeof workerBalanceSnapshots.$inferSelect;
+export type InsertWorkerBalanceSnapshot =
+  typeof workerBalanceSnapshots.$inferInsert;
 
 /**
  * CSV imports - tracks bulk imports from offline providers
@@ -352,12 +630,17 @@ export const csvImports = mysqlTable(
     totalRecords: int("total_records"),
     successfulRecords: int("successful_records"),
     failedRecords: int("failed_records"),
-    status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending"),
+    status: mysqlEnum("status", [
+      "pending",
+      "processing",
+      "completed",
+      "failed",
+    ]).default("pending"),
     errorLog: text("error_log"),
     importedBy: int("imported_by"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => ({
+  table => ({
     providerIdIdx: index("idx_csv_imports_provider").on(table.providerId),
     importDateIdx: index("idx_csv_imports_date").on(table.importDate),
   })

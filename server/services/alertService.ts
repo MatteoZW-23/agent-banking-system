@@ -11,6 +11,10 @@ export interface AlertNotification {
 }
 
 export class AlertService {
+  checkAllThresholds: any;
+  checkAllThresholds(): any {
+    throw new Error("Method not implemented.");
+  }
   /**
    * Create and trigger an alert
    */
@@ -75,7 +79,10 @@ export class AlertService {
   /**
    * Send notifications through configured channels
    */
-  private async sendNotifications(notification: AlertNotification, severity: string): Promise<void> {
+  private async sendNotifications(
+    notification: AlertNotification,
+    severity: string
+  ): Promise<void> {
     const channels = notification.channels || [];
 
     for (const channel of channels) {
@@ -95,7 +102,10 @@ export class AlertService {
             break;
         }
       } catch (error) {
-        console.error(`[AlertService] Failed to send ${channel} notification:`, error);
+        console.error(
+          `[AlertService] Failed to send ${channel} notification:`,
+          error
+        );
       }
     }
   }
@@ -103,7 +113,9 @@ export class AlertService {
   /**
    * Send SMS notification using Africa's Talking or similar service
    */
-  private async sendSmsNotification(notification: AlertNotification): Promise<void> {
+  private async sendSmsNotification(
+    notification: AlertNotification
+  ): Promise<void> {
     const smsApiKey = process.env.SMS_API_KEY;
     const alertPhone = process.env.ALERT_PHONE;
 
@@ -142,7 +154,9 @@ export class AlertService {
   /**
    * Send email notification
    */
-  private async sendEmailNotification(notification: AlertNotification): Promise<void> {
+  private async sendEmailNotification(
+    notification: AlertNotification
+  ): Promise<void> {
     const emailService = process.env.EMAIL_SERVICE;
 
     if (!emailService) {
@@ -162,7 +176,9 @@ export class AlertService {
   /**
    * Send webhook notification
    */
-  private async sendWebhookNotification(notification: AlertNotification): Promise<void> {
+  private async sendWebhookNotification(
+    notification: AlertNotification
+  ): Promise<void> {
     const webhookUrl = process.env.ALERT_WEBHOOK_URL;
 
     if (!webhookUrl) {
@@ -185,7 +201,9 @@ export class AlertService {
   /**
    * Create in-app notification
    */
-  private async createInAppNotification(notification: AlertNotification): Promise<void> {
+  private async createInAppNotification(
+    notification: AlertNotification
+  ): Promise<void> {
     // This would integrate with the notification API
     console.log(`[In-App] Alert: ${notification.title}`);
   }
@@ -193,7 +211,10 @@ export class AlertService {
   /**
    * Acknowledge an alert
    */
-  async acknowledgeAlert(alertId: number, acknowledgedBy: number): Promise<void> {
+  async acknowledgeAlert(
+    alertId: number,
+    acknowledgedBy: number
+  ): Promise<void> {
     const db = await getDb();
     if (!db) return;
 
@@ -233,13 +254,14 @@ export class AlertService {
       const floats = await db.select().from(providerFloats);
 
       for (const float of floats) {
-        const currentBalance = typeof float.currentBalance === "string"
-          ? parseFloat(float.currentBalance)
-          : (float.currentBalance as number);
+        const currentBalance =
+          typeof float.currentBalance === "string"
+            ? parseFloat(float.currentBalance)
+            : (float.currentBalance as number);
         const minimumThreshold = float.minimumThreshold
-          ? (typeof float.minimumThreshold === "string"
-              ? parseFloat(float.minimumThreshold)
-              : (float.minimumThreshold as number))
+          ? typeof float.minimumThreshold === "string"
+            ? parseFloat(float.minimumThreshold)
+            : (float.minimumThreshold as number)
           : 0;
 
         if (currentBalance < minimumThreshold) {
@@ -274,9 +296,9 @@ export class AlertService {
 
       for (const flag of flaggedTxns) {
         const riskScore = flag.riskScore
-          ? (typeof flag.riskScore === "string"
-              ? parseFloat(flag.riskScore)
-              : (flag.riskScore as number))
+          ? typeof flag.riskScore === "string"
+            ? parseFloat(flag.riskScore)
+            : (flag.riskScore as number)
           : 0;
 
         if (riskScore > 0.7) {

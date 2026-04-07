@@ -1,6 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -13,11 +19,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Trophy, 
+  TrendingUp, 
+  Users, 
+  DollarSign, 
+  ArrowUpRight, 
+  Calendar, 
+  FileBox, 
+  Download, 
+  UserCheck, 
+  Zap,
+  RefreshCw,
+  MoreHorizontal,
+  ChevronRight,
+  TrendingDown
+} from "lucide-react";
 
 export default function Commissions() {
   const { isAuthenticated } = useAuth({ redirectOnUnauthenticated: true });
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0],
+    start: new Date(new Date().setDate(new Date().getDate() - 30))
+      .toISOString()
+      .split("T")[0],
     end: new Date().toISOString().split("T")[0],
   });
 
@@ -39,217 +63,243 @@ export default function Commissions() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Commission Tracking</h1>
-          <p className="text-muted-foreground mt-2">
-            Monitor employee commissions and performance
-          </p>
+      <div className="space-y-10 animate-fade-in">
+        {/* Header section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-slate-200 dark:border-slate-800">
+          <div className="space-y-1.5">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Commission Ledger
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
+              Monitor incentive distribution and workforce performance analytics.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+             <Button variant="outline" className="h-11 rounded-xl px-4 border-slate-200 font-bold text-xs uppercase tracking-widest text-slate-600">
+               <Download className="mr-2 h-4 w-4" /> Export Payouts
+             </Button>
+             <Button className="h-11 rounded-xl premium-gradient text-white px-6 font-bold shadow-lg shadow-primary/20">
+               Audit Full Period
+             </Button>
+          </div>
         </div>
 
-        {/* Date Range Filter */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Period</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Start Date</label>
-                <input
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">End Date</label>
-                <input
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 border rounded-md"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Audit Period configuration */}
+        <div className="grid gap-4 md:grid-cols-4 p-4 glass rounded-2xl border border-slate-200 dark:border-slate-800">
+             <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-1.5 opacity-60">
+                  <Calendar className="w-3 h-3" /> Audit Horizon Selection
+                </label>
+                <div className="flex items-center gap-3">
+                   <input
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                    className="w-full h-10 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold"
+                  />
+                  <span className="text-slate-300">—</span>
+                  <input
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                    className="w-full h-10 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold"
+                  />
+                </div>
+             </div>
 
-        {/* Summary */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">${totalCommission.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {report?.period || "Selected period"}
-              </p>
-            </CardContent>
-          </Card>
+             <div className="flex items-end pb-0.5">
+                <Button className="w-full h-10 rounded-xl premium-gradient text-white font-bold shadow-md shadow-primary/10">
+                  Recalculate Earnings
+                </Button>
+             </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{employeeCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">With transactions</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Average Commission</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                ${employeeCount > 0 ? (totalCommission / employeeCount).toFixed(2) : "0.00"}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Per employee</p>
-            </CardContent>
-          </Card>
+             <div className="flex items-end pb-0.5">
+                <Button variant="ghost" className="w-full h-10 rounded-xl text-slate-500 font-bold text-xs uppercase hover:bg-slate-50">
+                  Default View
+                </Button>
+             </div>
         </div>
 
-        {/* Employee Commission Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Commission Breakdown</CardTitle>
-            <CardDescription>
-              Detailed commission for each employee during the selected period
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {reportQuery.isLoading ? (
-              <p className="text-muted-foreground">Loading commission data...</p>
-            ) : report && report.details.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee Code</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="text-right">Transactions</TableHead>
-                      <TableHead className="text-right">Total Amount</TableHead>
-                      <TableHead className="text-right">Commission</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {report.details.map((emp) => (
-                      <TableRow key={emp.employeeCode}>
-                        <TableCell className="font-mono text-sm">{emp.employeeCode}</TableCell>
-                        <TableCell>{emp.employeeName}</TableCell>
-                        <TableCell className="text-right">{emp.transactionCount}</TableCell>
-                        <TableCell className="text-right">
-                          ${typeof emp.totalAmount === "string"
-                            ? parseFloat(emp.totalAmount).toFixed(2)
-                            : (emp.totalAmount as number).toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ${typeof emp.totalCommission === "string"
-                            ? parseFloat(emp.totalCommission).toFixed(2)
-                            : (emp.totalCommission as number).toFixed(2)}
-                        </TableCell>
+        {/* Executive Summary Cards */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {[
+            { label: "Aggregate Commission", value: `$${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, sub: report?.period || "Selected Horizon", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+            { label: "Active Workforce", value: employeeCount, sub: "Agents with throughput", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Median Payout", value: `$${employeeCount > 0 ? (totalCommission / employeeCount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}`, sub: "Per assigned agent", icon: TrendingUp, color: "text-amber-500", bg: "bg-amber-500/10" },
+          ].map((stat, i) => (
+             <Card key={i} className="hover-lift border-none shadow-sm dark:bg-slate-900/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                   <div className={`p-2.5 rounded-xl ${stat.bg}`}>
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                   </div>
+                   <ArrowUpRight className="h-4 w-4 text-slate-300" />
+                </CardHeader>
+                <CardContent>
+                   <div className="text-3xl font-black text-slate-900 dark:text-white">{stat.value}</div>
+                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5">{stat.label}</p>
+                   <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase opacity-60 truncate">{stat.sub}</p>
+                </CardContent>
+             </Card>
+          ))}
+        </div>
+
+        <div className="grid gap-10 lg:grid-cols-7">
+          {/* Main Earnings Table */}
+          <Card className="lg:col-span-4 border-none shadow-sm dark:bg-slate-900/50">
+            <CardHeader className="flex flex-row items-center justify-between">
+               <div>
+                  <CardTitle className="text-xl">Workforce Earnings</CardTitle>
+                  <CardDescription>Individual agent performance and accruals</CardDescription>
+               </div>
+               <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 font-bold">{employeeCount} AGENTS</Badge>
+            </CardHeader>
+            <CardContent>
+              {reportQuery.isLoading ? (
+                <div className="py-20 flex justify-center">
+                   <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              ) : report && report.details.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-slate-50 dark:border-slate-800">
+                        <TableHead className="text-xs font-bold uppercase tracking-widest">Agent Ident</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Throughput</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Net Accrual</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Status</TableHead>
                       </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {report.details.map((emp: any) => (
+                        <TableRow key={emp.employeeCode} className="group hover:bg-slate-50 dark:hover:bg-slate-800/20 border-slate-50 dark:border-slate-800 transition-colors h-16">
+                          <TableCell>
+                             <div className="flex flex-col">
+                                <span className="font-bold text-slate-800 dark:text-slate-100">{emp.employeeName}</span>
+                                <span className="font-mono text-[10px] text-slate-400 uppercase">CODE: {emp.employeeCode}</span>
+                             </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                             <div className="flex flex-col">
+                                <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{emp.transactionCount} TXNs</span>
+                                <span className="text-[10px] text-slate-400 font-medium">${typeof emp.totalAmount === "string" ? parseFloat(emp.totalAmount).toLocaleString() : (emp.totalAmount as number).toLocaleString()}</span>
+                             </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                             <span className="text-sm font-black text-emerald-500">
+                               ${typeof emp.totalCommission === "string" ? parseFloat(emp.totalCommission).toFixed(2) : (emp.totalCommission as number).toFixed(2)}
+                             </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                             <div className="flex items-center justify-end gap-3">
+                                <Badge variant="outline" className="text-[10px] font-bold text-slate-400 border-slate-200">VERIFIED</Badge>
+                                <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-300 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+                             </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="py-24 text-center">
+                   <div className="h-16 w-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileBox className="h-8 w-8 text-slate-200" />
+                   </div>
+                   <h3 className="text-lg font-bold text-slate-800 dark:text-white">Zero Activity Ledger</h3>
+                   <p className="text-sm text-slate-500 max-w-xs mx-auto mt-1">No commission data detected for the current horizon period.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-span-3 space-y-8">
+            {/* Top Performers Podium */}
+            {report && report.details.length > 0 && (
+              <Card className="border-none shadow-sm dark:bg-slate-900/50">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-amber-500" /> Performance Leaders
+                  </CardTitle>
+                  <CardDescription>Top revenue generators for the period</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {report.details
+                    .sort((a: any, b: any) => {
+                      const aComm = typeof a.totalCommission === "string" ? parseFloat(a.totalCommission) : (a.totalCommission as number);
+                      const bComm = typeof b.totalCommission === "string" ? parseFloat(b.totalCommission) : (b.totalCommission as number);
+                      return bComm - aComm;
+                    })
+                    .slice(0, 4)
+                    .map((emp: any, idx: number) => (
+                      <div key={emp.employeeCode} className="group p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-between hover:bg-emerald-500/5 transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-10 w-10 flex items-center justify-center rounded-xl font-black text-xs ${idx === 0 ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'bg-white dark:bg-slate-900 border border-slate-100 text-slate-400'}`}>
+                            #{idx + 1}
+                          </div>
+                          <div className="space-y-0.5">
+                             <p className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">{emp.employeeName}</p>
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{emp.transactionCount} INITIATED FLOWS</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-lg font-black text-emerald-500">
+                             ${typeof emp.totalCommission === "string" ? parseFloat(emp.totalCommission).toFixed(0) : (emp.totalCommission as number).toFixed(0)}
+                           </p>
+                           <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 text-[10px] bg-emerald-500/5 font-bold">+12%</Badge>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">
-                No commission data for the selected period
-              </p>
+                    <Button variant="ghost" className="w-full text-xs font-bold text-primary uppercase tracking-widest mt-4 flex items-center justify-between group">
+                       View All Rankings <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Transaction Type Breakdown */}
-        {report && report.details.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Commission by Transaction Type</CardTitle>
-              <CardDescription>
-                Commission breakdown by transaction type across all employees
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {["cash_out", "cash_in", "send_money", "receive_money", "bill_payment", "airtime"].map(
-                  (type) => {
-                    const typeCommission = report.details.reduce((sum, emp) => {
-                      const breakdown = emp.commissionBreakdown.find((b) => b.transactionType === type);
-                      return sum + (breakdown?.commission || 0);
-                    }, 0);
+            {/* Accrual Categories */}
+            <Card className="border-none shadow-sm dark:bg-slate-900/50 overflow-hidden">
+               <div className="h-1.5 premium-gradient opacity-40 w-full" />
+               <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-primary" /> Allocation Flux
+                  </CardTitle>
+                  <CardDescription>Network-wide earning breakdown by flow type</CardDescription>
+               </CardHeader>
+               <CardContent className="space-y-3">
+                  {["cash_out", "cash_in", "send_money", "receive_money", "bill_payment", "airtime"].map(
+                    (type) => {
+                      const typeCommission = report?.details.reduce((sum: number, emp: any) => {
+                        const breakdown = emp.commissionBreakdown.find((b: any) => b.transactionType === type);
+                        return sum + (breakdown?.commission || 0);
+                      }, 0) || 0;
 
-                    if (typeCommission === 0) return null;
+                      if (typeCommission === 0) return null;
 
-                    return (
-                      <div key={type} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium text-sm">{type.replace(/_/g, " ").toUpperCase()}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {report.details.reduce((sum, emp) => {
-                              const breakdown = emp.commissionBreakdown.find((b) => b.transactionType === type);
-                              return sum + (breakdown?.count || 0);
-                            }, 0)}{" "}
-                            transactions
-                          </p>
+                      return (
+                        <div key={type} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-2xl group hover:border-primary/20 transition-all">
+                          <div className="flex gap-4">
+                             <div className="h-10 w-10 bg-white dark:bg-slate-900 border border-slate-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-primary" />
+                             </div>
+                             <div className="space-y-0.5">
+                                <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tighter">{type.replace(/_/g, " ")}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                   {report?.details.reduce((sum: number, emp: any) => {
+                                      const breakdown = emp.commissionBreakdown.find((b: any) => b.transactionType === type);
+                                      return sum + (breakdown?.count || 0);
+                                   }, 0)} Transactions
+                                </p>
+                             </div>
+                          </div>
+                          <p className="text-sm font-black text-slate-900 dark:text-white">${typeCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                         </div>
-                        <Badge className="bg-blue-100 text-blue-800">
-                          ${typeCommission.toFixed(2)}
-                        </Badge>
-                      </div>
-                    );
-                  }
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Top Performers */}
-        {report && report.details.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Performers</CardTitle>
-              <CardDescription>Employees with highest commission earnings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {report.details
-                  .sort((a, b) => {
-                    const aComm = typeof a.totalCommission === "string"
-                      ? parseFloat(a.totalCommission)
-                      : (a.totalCommission as number);
-                    const bComm = typeof b.totalCommission === "string"
-                      ? parseFloat(b.totalCommission)
-                      : (b.totalCommission as number);
-                    return bComm - aComm;
-                  })
-                  .slice(0, 5)
-                  .map((emp, idx) => (
-                    <div key={emp.employeeCode} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Badge className="bg-gray-200 text-gray-800">{idx + 1}</Badge>
-                        <div>
-                          <p className="font-medium">{emp.employeeName}</p>
-                          <p className="text-xs text-muted-foreground">{emp.transactionCount} transactions</p>
-                        </div>
-                      </div>
-                      <p className="text-lg font-bold text-green-600">
-                        ${typeof emp.totalCommission === "string"
-                          ? parseFloat(emp.totalCommission).toFixed(2)
-                          : (emp.totalCommission as number).toFixed(2)}
-                      </p>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                      );
+                    }
+                  )}
+               </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

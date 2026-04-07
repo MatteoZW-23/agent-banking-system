@@ -4,30 +4,51 @@ import { TransactionOrchestrator } from "./transactionOrchestrator";
 describe("TransactionOrchestrator", () => {
   describe("fetchFromAllProviders", () => {
     it("should return empty array when no providers are active", async () => {
-      const result = await TransactionOrchestrator.fetchFromAllProviders(new Date("2026-01-01"), new Date("2026-01-31"));
+      const result = await TransactionOrchestrator.fetchFromAllProviders(
+        new Date("2026-01-01"),
+        new Date("2026-01-31")
+      );
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("should handle database connection errors gracefully", async () => {
-      const result = await TransactionOrchestrator.fetchFromAllProviders(new Date("2026-01-01"), new Date("2026-01-31"));
+      const result = await TransactionOrchestrator.fetchFromAllProviders(
+        new Date("2026-01-01"),
+        new Date("2026-01-31")
+      );
       expect(result).toBeDefined();
     });
   });
 
   describe("fetchFromProvider", () => {
     it("should return error when provider not found", async () => {
-      const result = await TransactionOrchestrator.fetchFromProvider(9999, "nonexistent", new Date("2026-01-01"), new Date("2026-01-31"));
+      const result = await TransactionOrchestrator.fetchFromProvider(
+        9999,
+        "nonexistent",
+        new Date("2026-01-01"),
+        new Date("2026-01-31")
+      );
       expect(result.failed).toBe(1);
       expect(result.errors.length).toBeGreaterThan(0);
     });
 
     it("should return error for unsupported provider", async () => {
-      const result = await TransactionOrchestrator.fetchFromProvider(1, "unsupported_provider", new Date("2026-01-01"), new Date("2026-01-31"));
+      const result = await TransactionOrchestrator.fetchFromProvider(
+        1,
+        "unsupported_provider",
+        new Date("2026-01-01"),
+        new Date("2026-01-31")
+      );
       expect(result.failed).toBeGreaterThanOrEqual(0);
     });
 
     it("should have correct result structure", async () => {
-      const result = await TransactionOrchestrator.fetchFromProvider(1, "ecocash", new Date("2026-01-01"), new Date("2026-01-31"));
+      const result = await TransactionOrchestrator.fetchFromProvider(
+        1,
+        "ecocash",
+        new Date("2026-01-01"),
+        new Date("2026-01-31")
+      );
       expect(result).toHaveProperty("providerId");
       expect(result).toHaveProperty("providerName");
       expect(result).toHaveProperty("fetched");

@@ -1,4 +1,8 @@
-import { RestProviderAdapter, ProviderTransaction, FloatBalance } from "./providerAdapter";
+import {
+  RestProviderAdapter,
+  ProviderTransaction,
+  FloatBalance,
+} from "./providerAdapter";
 
 /**
  * Nedbank mTLS provider adapter
@@ -9,7 +13,10 @@ export class NedbankAdapter extends RestProviderAdapter {
     console.log("[Nedbank] Using mTLS certificate authentication");
   }
 
-  async fetchTransactions(fromDate: Date, toDate: Date): Promise<ProviderTransaction[]> {
+  async fetchTransactions(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<ProviderTransaction[]> {
     await this.authenticate();
     // Implementation would use mTLS client certificates
     return [];
