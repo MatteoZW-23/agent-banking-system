@@ -31,6 +31,7 @@ import { alertService } from "./services/alertService";
 import { commissionService } from "./services/commissionService";
 import { csvImportService } from "./services/csvImport";
 import { TransactionOrchestrator } from "./services/transactionOrchestrator";
+import { analyticsRouter } from "./routers/analytics";
 import { systemRouter } from "./_core/systemRouter";
 
 export const appRouter = router({
@@ -334,6 +335,7 @@ export const appRouter = router({
         return results;
       }),
   }),
+  // Analytics
+  analytics: analyticsRouter,
 });
-
 export type AppRouter = typeof appRouter;
