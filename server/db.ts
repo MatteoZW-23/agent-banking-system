@@ -169,11 +169,40 @@ export async function getAllEmployees() {
         { id: 3, uniqueCode: "EMP003", branchId: 2, name: "Tinashe Moyo", email: "tinashe@agent.co.zw", status: "active", role: "supervisor" },
         { id: 4, uniqueCode: "EMP004", branchId: 3, name: "Blessing Phiri", email: "blessing@agent.co.zw", status: "active", role: "agent" },
         { id: 5, uniqueCode: "EMP005", branchId: 4, name: "Memory Mutasa", email: "memory@agent.co.zw", status: "active", role: "agent" },
+        { id: 6, uniqueCode: "EMP006", branchId: 1, name: "Tendai Zulu", email: "tendai@agent.co.zw", status: "active", role: "agent" },
+        { id: 7, uniqueCode: "EMP007", branchId: 2, name: "Farai Chimo", email: "farai@agent.co.zw", status: "active", role: "agent" },
+        { id: 8, uniqueCode: "EMP008", branchId: 3, name: "Vimbai Gomo", email: "vimbai@agent.co.zw", status: "active", role: "agent" },
+        { id: 9, uniqueCode: "EMP009", branchId: 1, name: "Nyasha Hove", email: "nyasha@agent.co.zw", status: "active", role: "agent" },
+        { id: 10, uniqueCode: "EMP010", branchId: 4, name: "Kudzai Dube", email: "kudzai@agent.co.zw", status: "active", role: "agent" },
       ];
     }
     return [];
   }
   return await db.select().from(employees).where(eq(employees.status, "active"));
+}
+
+export async function createEmployee(data: any) {
+  const db = await getDb();
+  if (!db) {
+    if (process.env.NODE_ENV === "development") {
+      return { id: Math.floor(Math.random() * 1000), ...data, status: "active" };
+    }
+    return null;
+  }
+  const [result] = await db.insert(employees).values(data);
+  return { id: result.insertId, ...data };
+}
+
+export async function registerAgentLine(data: any) {
+  const db = await getDb();
+  if (!db) {
+    if (process.env.NODE_ENV === "development") {
+      return { id: Math.floor(Math.random() * 1000), ...data };
+    }
+    return null;
+  }
+  const [result] = await db.insert(agentRegistrations).values(data);
+  return { id: result.insertId, ...data };
 }
 
 export async function getEmployeeRegistrations(employeeId: number) {
@@ -250,8 +279,11 @@ export async function getAllFloatRequests(status?: string) {
   if (!db) {
     if (process.env.NODE_ENV === "development") {
       return [
-        { id: 1, employeeId: 1, providerId: 1, amount: "500.00", status: "pending", requestTime: new Date(), workerNotes: "High demand today" },
-        { id: 2, employeeId: 2, providerId: 2, amount: "200.00", status: "pending", requestTime: new Date(), workerNotes: "Running low on OneMoney" },
+        { id: 1, employeeId: 1, providerId: 1, amount: "550.00", status: "pending", requestTime: new Date(Date.now() - 3600000), workerNotes: "High demand at CBD stall" },
+        { id: 2, employeeId: 2, providerId: 2, amount: "200.00", status: "pending", requestTime: new Date(Date.now() - 4000000), workerNotes: "OneMoney running low" },
+        { id: 3, employeeId: 6, providerId: 3, amount: "1200.00", status: "pending", requestTime: new Date(Date.now() - 2000000), workerNotes: "Bulk cashout needed" },
+        { id: 4, employeeId: 4, providerId: 1, amount: "350.00", status: "transferred", requestTime: new Date(Date.now() - 8000000), workerNotes: "Morning topup", processedTime: new Date(), transactionReference: "TXN-882109" },
+        { id: 5, employeeId: 5, providerId: 6, amount: "150.00", status: "declined", requestTime: new Date(Date.now() - 12000000), workerNotes: "End of day request", adminNotes: "Closed for the day" },
       ];
     }
     return [];
@@ -319,8 +351,13 @@ export async function getAllBranches() {
         { id: 1, name: "Harare CBD Hub", region: "Harare", managerName: "Tendai Zulu", status: "active" },
         { id: 2, name: "Bulawayo North", region: "Bulawayo", managerName: "Nqobizitha Dube", status: "active" },
         { id: 3, name: "Gweru Central", region: "Midlands", managerName: "Sihle Gumbo", status: "active" },
-        { id: 4, name: "Mutare Border", region: "Manicaland", managerName: "Farai Chuma", status: "active" },
+        { id: 4, name: "Mutare Border Node", region: "Manicaland", managerName: "Farai Chuma", status: "active" },
         { id: 5, name: "Masvingo South", region: "Masvingo", managerName: "Rumbidzai Zhou", status: "active" },
+        { id: 6, name: "Chitungwiza Center", region: "Harare", managerName: "Mlandu N.", status: "active" },
+        { id: 7, name: "Kwekwe Hub", region: "Midlands", managerName: "Prosper M.", status: "active" },
+        { id: 8, name: "Beitbridge Logistics", region: "Mat South", managerName: "Tadiwa S.", status: "active" },
+        { id: 9, name: "Victoria Falls Node", region: "Mat North", managerName: "Kelvin K.", status: "active" },
+        { id: 10, name: "Marondera East", region: "Mash East", managerName: "Beauty T.", status: "active" },
       ];
     }
     return [];
@@ -331,7 +368,28 @@ export async function getAllBranches() {
 // Transaction queries
 export async function getTransactionsByProvider(providerId: number, limit = 100, offset = 0) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    if (process.env.NODE_ENV === "development") {
+      const types = ["cash_in", "cash_out", "bill_payment", "airtime"];
+      const statuses = ["completed", "pending", "failed"];
+      const txs = [];
+      for (let i = 0; i < 15; i++) {
+        txs.push({
+          id: offset + i + 1,
+          providerId,
+          type: types[i % types.length],
+          amount: (Math.random() * 800 + 50).toFixed(2),
+          fee: (Math.random() * 12).toFixed(2),
+          status: i === 0 ? "pending" : statuses[i % statuses.length],
+          transactionTime: new Date(Date.now() - i * 1800000),
+          providerReference: `REF-${Math.floor(Math.random() * 1000000)}`,
+          reconciliationStatus: i % 3 === 0 ? "matched" : "unreconciled"
+        });
+      }
+      return txs;
+    }
+    return [];
+  }
   return await db
     .select()
     .from(transactions)
@@ -358,11 +416,12 @@ export async function getTransactionsByDateRange(startDate: Date, endDate: Date)
   if (!db) {
     if (process.env.NODE_ENV === "development") {
       return [
-        { id: 1, providerId: 1, type: "deposit", amount: "500.00", fee: "5.00", status: "completed", transactionTime: new Date(), providerReference: "ECO_882291", reconciliationStatus: "matched" },
-        { id: 2, providerId: 4, type: "withdrawal", amount: "1200.00", fee: "12.00", status: "completed", transactionTime: new Date(), providerReference: "ZB_99211", reconciliationStatus: "mismatch" },
-        { id: 3, providerId: 2, type: "bill_payment", amount: "45.00", fee: "1.50", status: "pending", transactionTime: new Date(Date.now() - 3600000), providerReference: "OM_7721", reconciliationStatus: "unreconciled" },
-        { id: 4, providerId: 1, type: "airtime", amount: "10.00", fee: "0.20", status: "completed", transactionTime: new Date(Date.now() - 7200000), providerReference: "ECO_1122", reconciliationStatus: "matched" },
-        { id: 5, providerId: 8, type: "deposit", amount: "2500.00", fee: "25.00", status: "failed", transactionTime: new Date(Date.now() - 86400000), providerReference: "PAY_4455", reconciliationStatus: "unreconciled" },
+        { id: 1, providerId: 1, type: "deposit", amount: "550.00", fee: "5.50", status: "completed", transactionTime: new Date(Date.now() - 300000), providerReference: "ECO_882291", reconciliationStatus: "matched" },
+        { id: 2, providerId: 4, type: "withdrawal", amount: "1200.00", fee: "12.00", status: "completed", transactionTime: new Date(Date.now() - 1200000), providerReference: "ZB_99211", reconciliationStatus: "mismatch" },
+        { id: 3, providerId: 2, type: "bill_payment", amount: "89.00", fee: "1.80", status: "pending", transactionTime: new Date(Date.now() - 3600000), providerReference: "OM_7721", reconciliationStatus: "unreconciled" },
+        { id: 4, providerId: 1, type: "airtime", amount: "25.00", fee: "0.50", status: "completed", transactionTime: new Date(Date.now() - 7200000), providerReference: "ECO_1122", reconciliationStatus: "matched" },
+        { id: 5, providerId: 3, type: "cash_out", amount: "3500.00", fee: "35.00", status: "completed", transactionTime: new Date(Date.now() - 14400000), providerReference: "IB_5521", reconciliationStatus: "matched" },
+        { id: 6, providerId: 6, type: "deposit", amount: "250.00", fee: "2.50", status: "completed", transactionTime: new Date(Date.now() - 18000000), providerReference: "NMB_009", reconciliationStatus: "matched" },
       ];
     }
     return [];
@@ -399,7 +458,7 @@ export async function getProviderFloats(providerId: number) {
 export async function getTotalFloatBalance() {
   const db = await getDb();
   if (!db) {
-    return process.env.NODE_ENV === "development" ? "12450.50" : "0";
+    return process.env.NODE_ENV === "development" ? "3120.40" : "0";
   }
   const result = await db
     .select({ total: providerFloats.currentBalance })
@@ -436,9 +495,16 @@ export async function getAlertHistory(limit = 50, offset = 0) {
   const db = await getDb();
   if (!db) {
     if (process.env.NODE_ENV === "development") {
+      const now = Date.now();
       return [
-        { id: 1, title: "Low Float Alert", message: "EcoCash float is below $500", severity: "critical", status: "triggered", triggeredAt: new Date() },
-        { id: 2, title: "Reconciliation Discrepancy", message: "Mismatch in ZB Bank transaction #T8822", severity: "high", status: "triggered", triggeredAt: new Date() },
+        { id: 101, title: "CRITICAL: Liquidity Drain", message: "EcoCash Harare CBD Hub depleted ($12.00 left). ACTION REQUIRED.", severity: "critical", status: "triggered", triggeredAt: new Date(now) },
+        { id: 102, title: "CRITICAL: Liquidity Drain", message: "OneMoney Mutare Node depleted ($4.50 left). ACTION REQUIRED.", severity: "critical", status: "triggered", triggeredAt: new Date(now - 10000) },
+        { id: 103, title: "CRITICAL: Liquidity Drain", message: "InnBucks Bulawayo Node depleted ($0.00 left). ACTION REQUIRED.", severity: "critical", status: "triggered", triggeredAt: new Date(now - 20000) },
+        { id: 104, title: "CRITICAL: Liquidity Drain", message: "EcoCash Gweru Node depleted ($18.00 left). ACTION REQUIRED.", severity: "critical", status: "triggered", triggeredAt: new Date(now - 30000) },
+        { id: 105, title: "High Velocity Withdrawal", message: "Harare Node detected $5,000+ volume in < 2 mins.", severity: "critical", status: "triggered", triggeredAt: new Date(now - 40000) },
+        { id: 1, title: "Low Float Warning", message: "EcoCash Harare CBD Hub dropping below threshold ($200.00 left).", severity: "critical", status: "triggered", triggeredAt: new Date(now - 600000) },
+        { id: 2, title: "Reconciliation Discrepancy", message: "OneMoney transaction mismatch detected for Node ID: AG-881.", severity: "high", status: "triggered", triggeredAt: new Date(now - 3600000) },
+        { id: 3, title: "Bulk Cashout Request", message: "Agent Sarah Sibanda requested 1200.00 USD for Bulawayo Central.", severity: "medium", status: "triggered", triggeredAt: new Date(now - 7200000) },
       ];
     }
     return [];

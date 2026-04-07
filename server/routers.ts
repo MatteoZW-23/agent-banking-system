@@ -21,7 +21,9 @@ import {
   getEmployeeFloatRequests,
   processFloatRequest,
   createBalanceSnapshot,
-  getLatestBalanceSnapshot
+  getLatestBalanceSnapshot,
+  createEmployee,
+  registerAgentLine
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
@@ -53,6 +55,30 @@ export const appRouter = router({
     listEmployees: protectedProcedure.query(async () => {
       return await getAllEmployees();
     }),
+    createEmployee: protectedProcedure
+       .input(z.object({
+          uniqueCode: z.string(),
+          name: z.string(),
+          email: z.string().email().optional().or(z.literal("")),
+          phone: z.string().optional(),
+          location: z.string().optional(), // New Location Field
+          branchId: z.number(),
+          role: z.enum(["agent", "supervisor", "manager"]).default("agent")
+       }))
+       .mutation(async ({ input }) => {
+          return await createEmployee(input);
+       }),
+    registerLine: protectedProcedure
+       .input(z.object({
+          employeeId: z.number(),
+          providerId: z.number(),
+          agentCode: z.string(),
+          merchantId: z.string().optional(),
+          floatAccount: z.string().optional(),
+       }))
+       .mutation(async ({ input }) => {
+          return await registerAgentLine(input);
+       }),
     getEmployeeLines: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
       .query(async ({ input }) => {

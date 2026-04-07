@@ -63,6 +63,7 @@ export const employees = mysqlTable(
     name: varchar("name", { length: 100 }).notNull(),
     email: varchar("email", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
+    location: varchar("location", { length: 255 }), // Physical worksite/address
     status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active"),
     role: mysqlEnum("role", ["agent", "supervisor", "manager"]).default("agent"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

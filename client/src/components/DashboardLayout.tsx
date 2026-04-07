@@ -36,7 +36,8 @@ import {
   MessageSquareShare,
   ShieldCheck,
   Building2,
-  Users2
+  Users2,
+  Linkedin
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -53,7 +54,7 @@ const menuItems = [
   { icon: BadgePercent, label: "Commissions", path: "/commissions" },
   { icon: FileUp, label: "CSV Import", path: "/csv-import" },
   { icon: FileChartLine, label: "Reports", path: "/reports" },
-  { icon: Settings, label: "Providers", path: "/provider-config" },
+  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -235,7 +236,6 @@ function DashboardLayoutContent({
               })}
             </SidebarMenu>
           </SidebarContent>
-
           <SidebarFooter className="p-4 border-t border-slate-100 dark:border-slate-800">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -267,6 +267,32 @@ function DashboardLayoutContent({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* MJ Signature Credits */}
+            {!isCollapsed && (
+              <div className="mt-6 px-2 animate-fade-in">
+                <div className="h-px w-full bg-slate-100 dark:bg-slate-800/60 mb-6 shadow-tiny" />
+                <a 
+                  href="https://linkedin.com/in/mathew-mabira-24861632b" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-between p-3.5 bg-white/40 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 rounded-2xl transition-all hover:border-primary/20 hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-95 shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+                      <Linkedin className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] italic mb-0.5 group-hover:text-primary/70 transition-colors">Designed & Built BY</span>
+                      <span className="text-sm font-black text-slate-800 dark:text-white font-outfit uppercase tracking-tighter italic shadow-primary-sm group-hover:tracking-widest transition-all">MJ</span>
+                    </div>
+                  </div>
+                  <div className="h-6 w-6 rounded-lg bg-primary/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                    <LayoutDashboard className="h-3 w-3 text-primary rotate-45" />
+                  </div>
+                </a>
+              </div>
+            )}
           </SidebarFooter>
         </Sidebar>
         {!isCollapsed && (
