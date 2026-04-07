@@ -1,17 +1,17 @@
-// Preconfigured storage helpers for the application service gateway
-// Uses the configured storage proxy (Authorization: Bearer <token>)
+// Preconfigured storage helpers for Manus WebDev templates
+// Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
 
 import { ENV } from './_core/env';
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
 function getStorageConfig(): StorageConfig {
-  const baseUrl = ENV.serviceBaseUrl;
-  const apiKey = ENV.serviceApiKey;
+  const baseUrl = ENV.forgeApiUrl;
+  const apiKey = ENV.forgeApiKey;
 
   if (!baseUrl || !apiKey) {
     throw new Error(
-      "Storage proxy credentials missing: set SERVICE_BASE_URL and SERVICE_API_KEY"
+      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
     );
   }
 

@@ -25,7 +25,7 @@ The Agent Banking Tracking System is a comprehensive multi-provider financial re
 - **Backend**: Express.js with tRPC for type-safe API procedures
 - **Database**: MySQL with Drizzle ORM for schema management
 - **Frontend**: React 19 with Tailwind CSS 4 for responsive UI
-- **Authentication**: External OAuth 2.0 for secure user management
+- **Authentication**: Manus OAuth 2.0 for secure user management
 - **LLM Integration**: Built-in LLM service for transaction analysis
 
 ## Database Schema
@@ -278,7 +278,7 @@ Critical alerts trigger SMS notifications to configured managers:
 
 ### Authentication
 
-- External OAuth 2.0 for user authentication
+- Manus OAuth 2.0 for user authentication
 - JWT tokens for session management
 - Role-based access control (admin/user)
 
@@ -304,10 +304,10 @@ Required environment variables:
 
 - `DATABASE_URL` - MySQL connection string
 - `JWT_SECRET` - Session signing secret
-- `VITE_AUTH_CLIENT_ID` - OAuth client identifier exposed to the frontend
-- `AUTH_SERVER_URL` - OAuth server URL
-- `SERVICE_BASE_URL` - Application service gateway endpoint
-- `SERVICE_API_KEY` - Application service gateway API key
+- `VITE_APP_ID` - Manus OAuth application ID
+- `OAUTH_SERVER_URL` - Manus OAuth server URL
+- `BUILT_IN_FORGE_API_URL` - Manus API endpoint
+- `BUILT_IN_FORGE_API_KEY` - Manus API key
 
 ### Provider Configuration
 

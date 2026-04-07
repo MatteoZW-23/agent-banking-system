@@ -13,7 +13,7 @@ import type {
   GetUserInfoResponse,
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
-} from "./types/authTypes";
+} from "./types/manusTypes";
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -30,21 +30,10 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {
-    if (ENV.authServerUrl) {
-      console.log("[OAuth] Initialized with baseURL:", ENV.authServerUrl);
-    }
-  }
-
-  ensureConfigured() {
-    if (!ENV.authServerUrl) {
-      throw new Error(
-        "AUTH_SERVER_URL is not configured. Configure your OAuth provider before using authentication."
-      );
-    }
-
-    if (!ENV.authClientId) {
-      throw new Error(
-        "VITE_AUTH_CLIENT_ID is not configured. Configure your OAuth client ID before using authentication."
+    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
+    if (!ENV.oAuthServerUrl) {
+      console.error(
+        "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
       );
     }
   }
@@ -58,10 +47,8 @@ class OAuthService {
     code: string,
     state: string
   ): Promise<ExchangeTokenResponse> {
-    this.ensureConfigured();
-
     const payload: ExchangeTokenRequest = {
-      clientId: ENV.authClientId,
+      clientId: ENV.appId,
       grantType: "authorization_code",
       code,
       redirectUri: this.decodeState(state),
@@ -78,8 +65,6 @@ class OAuthService {
   async getUserInfoByToken(
     token: ExchangeTokenResponse
   ): Promise<GetUserInfoResponse> {
-    this.ensureConfigured();
-
     const { data } = await this.client.post<GetUserInfoResponse>(
       GET_USER_INFO_PATH,
       {
@@ -93,7 +78,7 @@ class OAuthService {
 
 const createOAuthHttpClient = (): AxiosInstance =>
   axios.create({
-    baseURL: ENV.authServerUrl || undefined,
+    baseURL: ENV.oAuthServerUrl,
     timeout: AXIOS_TIMEOUT_MS,
   });
 
@@ -175,7 +160,7 @@ class SDKServer {
   }
 
   /**
-   * Create a session token for an authenticated user
+   * Create a session token for a Manus user openId
    * @example
    * const sessionToken = await sdk.createSessionToken(userInfo.openId);
    */
@@ -183,16 +168,10 @@ class SDKServer {
     openId: string,
     options: { expiresInMs?: number; name?: string } = {}
   ): Promise<string> {
-    if (!ENV.authClientId) {
-      throw new Error(
-        "VITE_AUTH_CLIENT_ID is not configured. Configure your OAuth client ID before creating sessions."
-      );
-    }
-
     return this.signSession(
       {
         openId,
-        appId: ENV.authClientId,
+        appId: ENV.appId,
         name: options.name || "",
       },
       options
@@ -256,11 +235,9 @@ class SDKServer {
   async getUserInfoWithJwt(
     jwtToken: string
   ): Promise<GetUserInfoWithJwtResponse> {
-    this.oauthService.ensureConfigured();
-
     const payload: GetUserInfoWithJwtRequest = {
       jwtToken,
-      projectId: ENV.authClientId,
+      projectId: ENV.appId,
     };
 
     const { data } = await this.client.post<GetUserInfoWithJwtResponse>(

@@ -253,14 +253,14 @@ Bulk transaction import:
 # Database
 DATABASE_URL=mysql://user:password@localhost:3306/agent_banking
 
-# OAuth
-VITE_AUTH_CLIENT_ID=your-client-id
-AUTH_SERVER_URL=https://auth.example.com
+# Manus OAuth
+VITE_APP_ID=your-app-id
+OAUTH_SERVER_URL=https://api.manus.im
 JWT_SECRET=your-jwt-secret
 
-# Service Gateway
-SERVICE_BASE_URL=https://api.example.com
-SERVICE_API_KEY=your-api-key
+# Manus APIs
+BUILT_IN_FORGE_API_URL=https://api.manus.im
+BUILT_IN_FORGE_API_KEY=your-api-key
 
 # Owner
 OWNER_OPEN_ID=your-open-id
@@ -360,7 +360,7 @@ Include:
 - **Frontend**: React 19, Tailwind CSS 4, TypeScript
 - **Backend**: Express.js, tRPC, TypeScript
 - **Database**: MySQL, Drizzle ORM
-- **Authentication**: External OAuth 2.0
+- **Authentication**: Manus OAuth 2.0
 - **LLM**: Built-in LLM service
 - **Testing**: Vitest
 

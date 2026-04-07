@@ -34,17 +34,17 @@ export type GenerateImageResponse = {
 export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerateImageResponse> {
-  if (!ENV.serviceBaseUrl) {
-    throw new Error("SERVICE_BASE_URL is not configured");
+  if (!ENV.forgeApiUrl) {
+    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
   }
-  if (!ENV.serviceApiKey) {
-    throw new Error("SERVICE_API_KEY is not configured");
+  if (!ENV.forgeApiKey) {
+    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
   }
 
   // Build the full URL by appending the service path to the base URL
-  const baseUrl = ENV.serviceBaseUrl.endsWith("/")
-    ? ENV.serviceBaseUrl
-    : `${ENV.serviceBaseUrl}/`;
+  const baseUrl = ENV.forgeApiUrl.endsWith("/")
+    ? ENV.forgeApiUrl
+    : `${ENV.forgeApiUrl}/`;
   const fullUrl = new URL(
     "images.v1.ImageService/GenerateImage",
     baseUrl
@@ -56,7 +56,7 @@ export async function generateImage(
       accept: "application/json",
       "content-type": "application/json",
       "connect-protocol-version": "1",
-      authorization: `Bearer ${ENV.serviceApiKey}`,
+      authorization: `Bearer ${ENV.forgeApiKey}`,
     },
     body: JSON.stringify({
       prompt: options.prompt,

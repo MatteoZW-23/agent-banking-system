@@ -32,26 +32,6 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
- * Branches table - tracks physical locations/hubs of operations
- */
-export const branches = mysqlTable(
-  "branches",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    name: varchar("name", { length: 100 }).notNull().unique(),
-    region: varchar("region", { length: 100 }),
-    managerName: varchar("manager_name", { length: 100 }),
-    contactPhone: varchar("contact_phone", { length: 20 }),
-    status: mysqlEnum("status", ["active", "closed", "maintenance"]).default("active"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-  }
-);
-
-export type Branch = typeof branches.$inferSelect;
-export type InsertBranch = typeof branches.$inferInsert;
-
-/**
  * Employees table - tracks agents and their unique identifiers across platforms
  */
 export const employees = mysqlTable(
@@ -59,19 +39,15 @@ export const employees = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(),
-    branchId: int("branch_id").references(() => branches.id),
     name: varchar("name", { length: 100 }).notNull(),
     email: varchar("email", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
-    location: varchar("location", { length: 255 }), // Physical worksite/address
     status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active"),
-    role: mysqlEnum("role", ["agent", "supervisor", "manager"]).default("agent"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => ({
     uniqueCodeIdx: index("idx_employees_unique_code").on(table.uniqueCode),
-    branchIdIdx: index("idx_employees_branch").on(table.branchId),
   })
 );
 
@@ -113,7 +89,6 @@ export const agentRegistrations = mysqlTable(
   "agent_registrations",
   {
     id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").references(() => employees.id),
     providerId: int("provider_id").notNull(),
     agentCode: varchar("agent_code", { length: 50 }).notNull(),
     merchantId: varchar("merchant_id", { length: 50 }),
@@ -125,7 +100,6 @@ export const agentRegistrations = mysqlTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    employeeIdIdx: index("idx_agent_reg_employee").on(table.employeeId),
     providerIdIdx: index("idx_agent_reg_provider").on(table.providerId),
     uniqueProviderAgent: unique("unique_provider_agent").on(table.providerId, table.agentCode),
   })
@@ -228,34 +202,6 @@ export const providerFloats = mysqlTable(
 
 export type ProviderFloat = typeof providerFloats.$inferSelect;
 export type InsertProviderFloat = typeof providerFloats.$inferInsert;
-
-/**
- * Float Requests - tracks worker requests for more floating capital
- */
-export const floatRequests = mysqlTable(
-  "float_requests",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").notNull(),
-    providerId: int("provider_id").notNull(),
-    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-    status: mysqlEnum("status", ["pending", "approved", "declined", "transferred"]).default("pending"),
-    requestTime: timestamp("request_time").defaultNow(),
-    processedTime: timestamp("processed_time"),
-    processedBy: int("processed_by"),
-    workerNotes: text("worker_notes"),
-    adminNotes: text("admin_notes"),
-    transactionReference: varchar("transaction_reference", { length: 255 }), // Bank/Momo transfer Ref
-  },
-  (table) => ({
-    employeeIdIdx: index("idx_float_req_employee").on(table.employeeId),
-    providerIdIdx: index("idx_float_req_provider").on(table.providerId),
-    statusIdx: index("idx_float_req_status").on(table.status),
-  })
-);
-
-export type FloatRequest = typeof floatRequests.$inferSelect;
-export type InsertFloatRequest = typeof floatRequests.$inferInsert;
 
 /**
  * Commission structures - flexible commission rules per provider and transaction type
@@ -392,67 +338,6 @@ export const alertHistory = mysqlTable(
 
 export type AlertHistory = typeof alertHistory.$inferSelect;
 export type InsertAlertHistory = typeof alertHistory.$inferInsert;
-
-/**
- * Workforce Check-ins - tracks daily opening/closing cash positions for agents
- */
-export const checkIns = mysqlTable(
-  "check_ins",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").notNull(),
-    branchId: int("branch_id"),
-    
-    // Financial Snapshots
-    openingCash: decimal("opening_cash", { precision: 15, scale: 2 }),
-    closingCash: decimal("closing_cash", { precision: 15, scale: 2 }),
-    openingLineBalances: json("opening_line_balances"), // JSON map of providerId -> amount
-    closingLineBalances: json("closing_line_balances"), // JSON map of providerId -> amount
-    
-    // Temporal data
-    checkInTime: timestamp("check_in_time").defaultNow(),
-    checkOutTime: timestamp("check_out_time"),
-    
-    // Status & Validation
-    status: mysqlEnum("status", ["pending_adjustment", "verified", "discrepancy"]).default("verified"),
-    notes: text("notes"),
-    metadata: json("metadata"), // Can include GPS coordinates, device ID
-  },
-  (table) => ({
-    employeeDateIdx: index("idx_checkin_employee").on(table.employeeId),
-    branchIdIdx: index("idx_checkin_branch").on(table.branchId),
-    checkInTimeIdx: index("idx_checkin_time").on(table.checkInTime),
-  })
-);
-
-export type CheckIn = typeof checkIns.$inferSelect;
-export type InsertCheckIn = typeof checkIns.$inferInsert;
-
-/**
- * Worker Balance Snapshots - tracks mid-shift updates of cash and floats
- */
-export const workerBalanceSnapshots = mysqlTable(
-  "worker_balance_snapshots",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    checkInId: int("check_in_id").notNull(),
-    employeeId: int("employee_id").notNull(),
-    
-    // Updates
-    cashAmount: decimal("cash_amount", { precision: 15, scale: 2 }),
-    floatBalances: json("float_balances"), // JSON map of providerId -> amount
-    updateReason: varchar("update_reason", { length: 255 }), // e.g. "After big cash-out"
-    
-    timestamp: timestamp("timestamp").defaultNow(),
-  },
-  (table) => ({
-    checkInIdIdx: index("idx_balance_snapshot_checkin").on(table.checkInId),
-    employeeIdIdx: index("idx_balance_snapshot_employee").on(table.employeeId),
-  })
-);
-
-export type WorkerBalanceSnapshot = typeof workerBalanceSnapshots.$inferSelect;
-export type InsertWorkerBalanceSnapshot = typeof workerBalanceSnapshots.$inferInsert;
 
 /**
  * CSV imports - tracks bulk imports from offline providers
