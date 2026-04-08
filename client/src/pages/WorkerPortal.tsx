@@ -511,8 +511,12 @@ export default function WorkerPortal() {
                               <p className="text-4xl font-black text-slate-900 font-outfit italic tracking-tighter">${parseFloat(req.amount).toLocaleString()}</p>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{providersQuery.data?.find(p => p.id === req.providerId)?.name}</p>
                            </div>
-                           <Badge className={`border-none font-black text-[8px] uppercase px-4 py-2 rounded-xl h-fit ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' : req.status === 'transferred' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                             {req.status}
+                           <Badge className={`border-none font-black text-[8px] uppercase px-4 py-2 rounded-xl h-fit ${
+                             req.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
+                             req.status === 'verified' ? 'bg-blue-100 text-blue-700 animate-pulse' :
+                             req.status === 'transferred' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                           }`}>
+                             {req.status === 'verified' ? 'Processing (Verified)' : req.status}
                            </Badge>
                         </div>
                       </div>

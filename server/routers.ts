@@ -145,7 +145,7 @@ export const appRouter = router({
 
     listEmployees: supervisorProcedure.query(async () => await getAllEmployees()),
 
-    createEmployee: adminProcedure
+    createEmployee: supervisorProcedure
       .input(
         z.object({
           uniqueCode: z.string(),
@@ -163,7 +163,7 @@ export const appRouter = router({
         return employee;
       }),
 
-    registerLine: adminProcedure
+    registerLine: supervisorProcedure
       .input(
         z.object({
           employeeId: z.number(),
@@ -409,6 +409,19 @@ export const appRouter = router({
           input.providerId
         )
       ),
+
+    getSupervisorPayout: supervisorProcedure.query(async ({ ctx }) => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      const report = await commissionService.getCommissionReport(start, end);
+      return {
+        dailyPool: parseFloat(report.totalCommissions || "0") * 0.05,
+        currency: "USD",
+        status: "Accumulating"
+      };
+    }),
   }),
 
   // ── CSV IMPORT ────────────────────────────────────────────────────

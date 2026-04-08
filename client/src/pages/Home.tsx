@@ -164,7 +164,7 @@ export default function Home() {
   );
 
   const floatRequestsQuery = trpc.nodes.listFloatRequests.useQuery(
-    { status: "pending" },
+    {}, // Fetch all (filter locally or leave as is if status is optional)
     { enabled: isAuthenticated, refetchInterval: 5000 }
   );
 
@@ -213,8 +213,8 @@ export default function Home() {
     },
     {
       title: "Float Top-up Requests",
-      value: floatRequestsQuery.data?.length || 0,
-      description: "Pending liquidity allocations for agents",
+      value: (floatRequestsQuery.data?.filter((r: any) => r.status === "pending" || r.status === "verified") || []).length,
+      description: "Aggregated liquidity queue",
       icon: Banknote,
       trend: "+3",
       trendUp: true,
@@ -282,11 +282,10 @@ export default function Home() {
         </div>
 
         <div className="grid gap-10 lg:grid-cols-12">
-          {/* Float Requests Panel */}
           <div className="lg:col-span-4 space-y-6">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-xl font-black font-outfit uppercase tracking-tight">
-                Agent Money Requests
+                Dispensation Queue
               </h3>
               <Badge className="bg-rose-500 text-white border-none font-black text-[10px] rounded-lg">
                 ACTION REQUIRED
@@ -294,22 +293,28 @@ export default function Home() {
             </div>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
               {floatRequestsQuery.data
-                ?.filter((r: any) => r.status === "pending")
+                ?.filter((r: any) => r.status === "pending" || r.status === "verified")
                 .map((request: any) => (
-                  <FloatRequestAction
-                    key={request.id}
-                    request={request}
-                    onProcessed={() => floatRequestsQuery.refetch()}
-                  />
+                  <div key={request.id} className="relative">
+                    {request.status === "verified" && (
+                      <div className="absolute -top-3 -right-3 z-20 px-4 py-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-2xl animate-bounce flex items-center gap-2">
+                        <ShieldCheckIcon className="h-3 w-3" /> Manager Verified
+                      </div>
+                    )}
+                    <FloatRequestAction
+                      request={request}
+                      onProcessed={() => floatRequestsQuery.refetch()}
+                    />
+                  </div>
                 ))}
               {(!floatRequestsQuery.data ||
                 floatRequestsQuery.data.filter(
-                  (r: any) => r.status === "pending"
+                  (r: any) => r.status === "pending" || r.status === "verified"
                 ).length === 0) && (
                 <div className="p-10 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-center">
                   <CheckCircle className="h-10 w-10 text-emerald-500 mb-4 opacity-20" />
                   <p className="text-sm font-bold text-slate-300">
-                    All liquidity requests are processed.
+                    No liquidity requests pending authorization.
                   </p>
                 </div>
               )}

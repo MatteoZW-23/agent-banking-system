@@ -2,6 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ShieldAlert,
   Activity,
@@ -13,9 +14,93 @@ import {
   Users,
   TrendingUp,
   AlertTriangle,
+  UserPlus,
+  ArrowRight,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
+
+function AgentEnrollmentForm({ onEnroll }: { onEnroll: () => void }) {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    uniqueCode: "",
+    branchId: 1, // Defaulting to first branch for now
+  });
+
+  const createMutation = trpc.nodes.createEmployee.useMutation({
+    onSuccess: () => {
+      toast.success("New Agent Enrolled Successfully");
+      setFormData({ name: "", email: "", phone: "", uniqueCode: "", branchId: 1 });
+      onEnroll();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({ ...formData, role: "agent" });
+  };
+
+  return (
+    <Card className="border border-slate-100 shadow-2xl shadow-slate-200/40 rounded-[2.5rem] bg-white overflow-hidden">
+      <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+             <UserPlus className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-xl font-black uppercase tracking-tight font-outfit italic">Agent Enrollment</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1 text-slate-400">Add verified personnel to the network</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-8">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              placeholder="Full Legal Name" 
+              value={formData.name}
+              onChange={e => setFormData({...formData, name: e.target.value})}
+              className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white transition-all font-bold text-xs"
+              required 
+            />
+            <Input 
+              placeholder="Unique Staff ID (e.g AGT-05)" 
+              value={formData.uniqueCode}
+              onChange={e => setFormData({...formData, uniqueCode: e.target.value})}
+              className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white transition-all font-bold text-xs"
+              required 
+            />
+          </div>
+          <Input 
+            type="email" 
+            placeholder="Official Email Address" 
+            value={formData.email}
+            onChange={e => setFormData({...formData, email: e.target.value})}
+            className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white transition-all font-bold text-xs"
+          />
+          <Input 
+            placeholder="Phone Number (+263...)" 
+            value={formData.phone}
+            onChange={e => setFormData({...formData, phone: e.target.value})}
+            className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white transition-all font-bold text-xs"
+          />
+          <Button 
+            disabled={createMutation.isPending}
+            className="w-full h-14 rounded-2xl premium-gradient text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all mt-4"
+          >
+            {createMutation.isPending ? "Validating..." : "Authorize Onboarding"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SupervisorDashboard() {
   const { user, logout } = useAuth();
@@ -24,6 +109,7 @@ export default function SupervisorDashboard() {
   const floatRequests = trpc.nodes.listFloatRequests.useQuery({ status: "pending" });
   const employees = trpc.nodes.listEmployees.useQuery();
   const alerts = trpc.alerts.getHistory.useQuery({ limit: 5 });
+  const payoutQuery = trpc.commissions.getSupervisorPayout.useQuery();
 
   const processMutation = trpc.nodes.processRequest.useMutation({
     onSuccess: () => {
@@ -36,11 +122,11 @@ export default function SupervisorDashboard() {
       await processMutation.mutateAsync({
         id,
         status: "approved",
-        adminNotes: "Approved by Regional Supervisor",
+        adminNotes: "Pre-verified by Regional Supervisor",
       });
-      toast.success("Float request approved. Auto-settlement check triggered.");
+      toast.success("Request Verified. Sent to Owner for Final Transfer.");
     } catch {
-      toast.error("Could not approve request. Please try again.");
+      toast.error("Could not verify request.");
     }
   };
 
@@ -72,31 +158,37 @@ export default function SupervisorDashboard() {
             <h1 className="text-2xl font-black uppercase tracking-tighter italic text-slate-900 font-outfit">
                Manager's<span className="text-primary not-italic">Office</span>
             </h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Authorized Personnel: {user?.name}</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Regional Overseer: {user?.name}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          onClick={logout}
-          className="h-12 px-6 rounded-2xl hover:bg-slate-50 font-black uppercase text-[10px] tracking-widest text-slate-500 hover:text-rose-500 transition-all"
-        >
-          Secure Sign Out <XCircle className="ml-3 h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-4">
+           <div className="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 hidden md:flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Network Verified</span>
+           </div>
+           <Button
+            variant="ghost"
+            onClick={logout}
+            className="h-12 px-6 rounded-2xl hover:bg-slate-50 font-black uppercase text-[10px] tracking-widest text-slate-500 hover:text-rose-500 transition-all"
+          >
+            Secure Sign Out <XCircle className="ml-3 h-4 w-4" />
+          </Button>
+        </div>
       </header>
 
-      <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="p-8 space-y-12 max-w-7xl mx-auto pb-24">
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
-              label: "Pending Approvals",
+              label: "Pending Verification",
               value: pendingCount,
               icon: Clock,
               color: "text-amber-600",
               bg: "bg-amber-50/50",
             },
             {
-              label: "Active Agents",
+              label: "Managed Agents",
               value: totalEmployees,
               icon: Users,
               color: "text-primary",
@@ -111,10 +203,10 @@ export default function SupervisorDashboard() {
             },
             {
               label: "Supervisor Pool (5%)",
-              value: "Operational",
+              value: payoutQuery.data ? `$${payoutQuery.data.dailyPool.toFixed(2)}` : "$0.00",
               icon: TrendingUp,
-              color: "text-slate-900",
-              bg: "bg-slate-50",
+              color: "text-emerald-500",
+              bg: "bg-emerald-50/50",
             },
           ].map((stat) => (
             <Card
@@ -134,151 +226,136 @@ export default function SupervisorDashboard() {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Float Request Queue */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-                <Wallet className="h-5 w-5 text-primary" />
-                Money Requests
-                {pendingCount > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border-none font-black">
-                    {pendingCount} waiting
-                  </Badge>
-                )}
-              </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => floatRequests.refetch()}
-                className="text-[10px] font-bold uppercase tracking-widest"
-              >
-                Refresh
-              </Button>
-            </div>
-
-            {floatRequests.isLoading && (
-              <div className="text-center py-12 text-slate-400 font-medium">Loading requests...</div>
-            )}
-
-            {!floatRequests.isLoading && pendingCount === 0 && (
-              <Card className="border-none shadow-lg rounded-2xl bg-white">
-                <CardContent className="p-12 text-center">
-                  <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
-                  <p className="font-black text-slate-900 uppercase tracking-tight">All Clear</p>
-                  <p className="text-sm text-slate-500 mt-2">No pending float requests right now.</p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="space-y-4">
-              {floatRequests.data?.map((req: any) => (
-                <Card
-                  key={req.id}
-                  className="border-none shadow-lg shadow-slate-200/50 rounded-2xl bg-white border-l-4 border-amber-400"
+        <div className="grid lg:grid-cols-3 gap-12">
+          {/* Left Column: Requests and Enrollment */}
+          <div className="lg:col-span-2 space-y-12">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between px-2">
+                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 font-outfit italic flex items-center gap-3">
+                  <Wallet className="h-6 w-6 text-primary" />
+                  Verification Queue
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => floatRequests.refetch()}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-colors"
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <p className="font-black text-slate-900 text-lg">${req.amount}</p>
-                        <p className="text-xs text-slate-500 font-medium mt-1">
-                          Employee #{req.employeeId} · Provider #{req.providerId}
-                        </p>
-                      </div>
-                      <Badge className="bg-amber-50 text-amber-600 border-amber-200 font-bold text-[10px] uppercase">
-                        Pending
-                      </Badge>
-                    </div>
+                  <Clock className="mr-2 h-3 w-3" /> Sync Latest
+                </Button>
+              </div>
 
-                    {req.workerNotes && (
-                      <div className="p-4 bg-slate-50 rounded-xl mb-4">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                          Agent Note
-                        </p>
-                        <p className="text-sm text-slate-700 italic">"{req.workerNotes}"</p>
-                      </div>
-                    )}
+              {pendingCount === 0 && (
+                <div className="p-12 text-center bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
+                  <ShieldCheck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                  <p className="font-black text-slate-400 uppercase tracking-widest text-xs">All Activity Verified</p>
+                </div>
+              )}
 
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => handleApprove(req.id)}
-                        disabled={processMutation.isPending}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 font-black text-[10px] uppercase tracking-widest"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" /> Approve
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleDecline(req.id)}
-                        disabled={processMutation.isPending}
-                        className="flex-1 border-rose-200 text-rose-500 hover:bg-rose-50 rounded-xl h-11 font-black text-[10px] uppercase tracking-widest"
-                      >
-                        <XCircle className="h-4 w-4 mr-2" /> Decline
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <div className="grid md:grid-cols-2 gap-6">
+                {floatRequests.data?.map((req: any) => (
+                  <Card
+                    key={req.id}
+                    className="border border-slate-100 shadow-lg shadow-slate-200/20 rounded-[2rem] bg-white group hover:border-primary/30 transition-all overflow-hidden"
+                  >
+                    <CardContent className="p-8">
+                      <div className="flex items-start justify-between mb-6">
+                        <div>
+                          <p className="text-3xl font-black text-slate-900 font-outfit italic tracking-tighter">${req.amount}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                            Branch ID #{req.employeeId} · Provider #{req.providerId}
+                          </p>
+                        </div>
+                        <Badge className="bg-amber-500/10 text-amber-600 border-none font-black text-[9px] uppercase px-3 py-1 mt-1">
+                          Awaiting Screening
+                        </Badge>
+                      </div>
+
+                      {req.workerNotes && (
+                        <div className="p-5 bg-slate-50 rounded-2xl mb-6 border border-slate-100">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 italic">Agent Justification</p>
+                          <p className="text-xs text-slate-600 font-medium leading-relaxed">"{req.workerNotes}"</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          onClick={() => handleApprove(req.id)}
+                          disabled={processMutation.isPending}
+                          className="premium-gradient text-white rounded-2xl h-12 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20"
+                        >
+                          Verify Req
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleDecline(req.id)}
+                          disabled={processMutation.isPending}
+                          className="border-slate-100 text-rose-500 hover:bg-rose-50 rounded-2xl h-12 font-black text-[10px] uppercase tracking-widest"
+                        >
+                          Decline
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
+
+            <AgentEnrollmentForm onEnroll={() => employees.refetch()} />
           </div>
 
-          {/* Alerts Panel */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-              <Activity className="h-5 w-5 text-rose-500" />
-              Security Alerts
-            </h2>
+          {/* Right Column: Security and Earnings */}
+          <div className="space-y-12">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 font-outfit italic flex items-center gap-3 px-2">
+                <Activity className="h-6 w-6 text-rose-500" />
+                Network Alerts
+              </h2>
 
-            <div className="space-y-3">
-              {alerts.data?.map((alert: any) => (
-                <Card
-                  key={alert.id}
-                  className="border-none shadow rounded-2xl bg-white"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-0.5 h-2 w-2 rounded-full flex-shrink-0 ${
-                          alert.severity === "critical"
-                            ? "bg-rose-500"
-                            : alert.severity === "high"
-                            ? "bg-amber-500"
-                            : "bg-blue-400"
-                        }`}
-                      />
-                      <div>
-                        <p className="text-xs font-black text-slate-900 leading-snug">
-                          {alert.title}
-                        </p>
-                        <p className="text-[10px] text-slate-400 mt-1 leading-relaxed line-clamp-2">
-                          {alert.message}
-                        </p>
-                      </div>
+              <div className="space-y-4">
+                {alerts.data?.map((alert: any) => (
+                  <div
+                    key={alert.id}
+                    className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all flex gap-4 items-start"
+                  >
+                    <div className={`mt-1 h-3 w-3 rounded-full flex-shrink-0 animate-pulse ${
+                      alert.severity === "critical" ? "bg-rose-500" : "bg-amber-500"
+                    }`} />
+                    <div>
+                      <p className="text-xs font-black text-slate-900 uppercase tracking-tight">
+                        {alert.title}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-2 font-medium leading-relaxed">
+                        {alert.message}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {(!alerts.data || alerts.data.length === 0) && (
-                <Card className="border-none shadow rounded-2xl bg-white">
-                  <CardContent className="p-6 text-center">
-                    <p className="text-sm text-slate-400 font-medium">No alerts at this time.</p>
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Commission Info */}
-            <Card className="border-none shadow-lg rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white mt-6">
-              <CardContent className="p-6">
-                <BarChart3 className="h-8 w-8 mb-4 opacity-80" />
-                <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-1">
-                  Your 5% Share
+            {/* Premium Earnings Card */}
+            <Card className="rounded-[2.5rem] bg-slate-900 p-1 relative overflow-hidden group shadow-2xl">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                 <Zap className="h-32 w-32 text-primary" />
+              </div>
+              <CardContent className="p-10 relative z-10">
+                <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center mb-8">
+                   <TrendingUp className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-3">Live Commission Share (5%)</h3>
+                <div className="flex items-baseline gap-2 mb-6">
+                   <span className="text-5xl font-black text-white font-outfit italic tracking-tighter">
+                      {payoutQuery.data ? `$${payoutQuery.data.dailyPool.toFixed(2)}` : "$0.00"}
+                   </span>
+                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">USD</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed mb-8">
+                  Your override on today's network volume. This is auto-credited to your manager account upon month-end settlement.
                 </p>
-                <p className="text-2xl font-black">Manager Pay</p>
-                <p className="text-xs opacity-70 mt-2 leading-relaxed">
-                  You earn 5% from every single commission made by agents in this network.
-                </p>
+                <Button className="w-full h-14 rounded-2xl bg-white text-slate-900 hover:bg-slate-50 font-black uppercase tracking-widest text-[10px] shadow-2xl transition-all">
+                  Withdrawal Protocols <ArrowRight className="ml-3 h-4 w-4" />
+                </Button>
               </CardContent>
             </Card>
           </div>

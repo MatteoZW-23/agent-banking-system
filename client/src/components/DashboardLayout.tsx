@@ -208,9 +208,9 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex flex-col gap-0.5 min-w-0 animate-in fade-in slide-in-from-left-4 duration-500">
                   <span className="text-xl font-black text-white italic tracking-tighter uppercase font-outfit">
-                    Command
+                    Branch
                   </span>
-                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-[0.4em]">Node_Alpha</span>
+                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-[0.4em]">Operations_01</span>
                 </div>
               ) : null}
             </div>
@@ -286,7 +286,7 @@ function DashboardLayoutContent({
                   className="group flex flex-col p-4 prism-panel rounded-2xl transition-all hover:border-emerald-500/30 overflow-hidden"
                 >
                   <div className="flex items-center justify-between mb-3">
-                     <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.4em] italic group-hover:text-emerald-500 transition-colors">Digital Signature</span>
+                     <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.4em] italic group-hover:text-emerald-500 transition-colors">Developer Verification</span>
                      <Linkedin className="h-3 w-3 text-slate-700 group-hover:text-emerald-500 transition-all opacity-30 group-hover:opacity-100" />
                   </div>
                   <div className="flex items-baseline gap-2">

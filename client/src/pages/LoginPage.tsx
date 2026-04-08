@@ -115,7 +115,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em] italic">
-             © 2026 Sovereign Finance Professional | Elite Node Asset tracking
+             © 2026 Sovereign Finance Professional | Branch Asset tracking
           </div>
         </div>
       </div>

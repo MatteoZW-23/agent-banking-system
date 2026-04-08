@@ -1,6 +1,6 @@
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure, adminProcedure, supervisorProcedure } from "../_core/trpc";
 import { z } from "zod";
-import {
+import { TRPCError } from "@trpc/server";
   getAllBranches,
   getAllEmployees,
   createEmployee,
@@ -21,10 +21,10 @@ export const nodesRouter = router({
   listBranches: protectedProcedure.query(async () => {
     return await getAllBranches();
   }),
-  listEmployees: protectedProcedure.query(async () => {
+  listEmployees: supervisorProcedure.query(async () => {
     return await getAllEmployees();
   }),
-  createEmployee: protectedProcedure
+  createEmployee: supervisorProcedure
     .input(
       z.object({
         uniqueCode: z.string(),
@@ -119,9 +119,23 @@ export const nodesRouter = router({
         transactionReference: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      const { id, ...rest } = input;
-      return await processFloatRequest(id, rest);
+    .mutation(async ({ input, ctx }) => {
+      const { id, status, ...rest } = input;
+      
+      // PERMISSION WALL: Only Admin can transfer cold cash
+      if (status === "transferred" && ctx.user.role !== "admin") {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "EXECUTIVE PERMISSION REQUIRED: Supervisors may only Verify/Decline requests." 
+        });
+      }
+
+      // Supervisor 'Approval' is now essentially 'Verification'
+      const finalStatus = (status === "approved" && ctx.user.role === "supervisor") 
+        ? "verified" 
+        : status;
+
+      return await processFloatRequest(id, { ...rest, status: finalStatus });
     }),
   updateBalances: protectedProcedure
     .input(
