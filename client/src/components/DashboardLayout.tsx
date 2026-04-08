@@ -44,9 +44,23 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+const adminMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: ArrowLeftRight, label: "Transactions", path: "/transactions" },
+  { icon: ClipboardCheck, label: "Reconciliation", path: "/reconciliation" },
+  { icon: Wallet, label: "Manage Floats", path: "/floats" },
+  { icon: Bell, label: "Operation Alerts", path: "/alerts" },
+  { icon: BadgePercent, label: "Commissions", path: "/commissions" },
+  { icon: ShieldCheck, label: "Security & Risk", path: "/security" },
+  { icon: Users2, label: "Agent Network", path: "/nodes" },
+  { icon: FileUp, label: "Import CSV", path: "/csv-import" },
+  { icon: FileChartLine, label: "Reports", path: "/reports" },
+  { icon: Settings, label: "Settings", path: "/settings" },
+];
+
+const workerMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/worker" },
+  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -66,6 +80,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -89,7 +104,7 @@ export default function DashboardLayout({
           </div>
           <Button
             onClick={() => {
-              window.location.href = getLoginUrl();
+              setLocation("/login");
             }}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
@@ -131,6 +146,9 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  
+  const isWorker = user?.role === "agent";
+  const menuItems = isWorker ? workerMenuItems : adminMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -172,33 +190,34 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative" ref={sidebarRef}>
+      <div className="relative group/sidebar" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r-0"
+          className="border-r border-white/5 bg-transparent backdrop-blur-2xl"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
+          <SidebarHeader className="h-24 justify-center px-6">
+            <div className="flex items-center gap-4 transition-all w-full">
               <button
                 onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                className="h-10 w-10 flex items-center justify-center prism-panel hover:bg-white/10 rounded-xl transition-all focus:outline-none shrink-0 group"
                 aria-label="Toggle navigation"
               >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                <PanelLeft className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
               </button>
               {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                <div className="flex flex-col gap-0.5 min-w-0 animate-in fade-in slide-in-from-left-4 duration-500">
+                  <span className="text-xl font-black text-white italic tracking-tighter uppercase font-outfit">
+                    Command
                   </span>
+                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-[0.4em]">Node_Alpha</span>
                 </div>
               ) : null}
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
+          <SidebarContent className="gap-0 px-4">
+            <SidebarMenu className="gap-2 py-2">
               {menuItems.map(item => {
                 const isActive = location === item.path;
                 return (
@@ -207,16 +226,19 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-11 rounded-xl transition-all duration-200 ${
+                      className={`h-12 rounded-xl transition-all duration-300 ${
                         isActive 
-                        ? "bg-slate-100 dark:bg-slate-800 text-primary font-semibold shadow-sm" 
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                        ? "prism-panel !bg-primary/20 text-white font-black shadow-[0_0_20px_rgba(139,92,246,0.15)] border-primary/30" 
+                        : "text-slate-500 hover:text-slate-200 hover:bg-white/5"
                       }`}
                     >
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        className={`h-4 w-4 ${isActive ? "text-primary scale-110" : ""}`}
                       />
-                      <span>{item.label}</span>
+                      <span className={`text-[10px] uppercase tracking-widest ${isActive ? "font-black" : "font-bold"}`}>{item.label}</span>
+                      {isActive && !isCollapsed && (
+                        <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -224,65 +246,74 @@ function DashboardLayoutContent({
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-3">
+          <SidebarFooter className="p-4 gap-6">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
+                <button className="flex items-center gap-4 rounded-2xl p-3 prism-panel hover:bg-white/10 transition-all w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none group">
+                  <Avatar className="h-10 w-10 border-2 border-white/5 shrink-0 group-hover:border-primary transition-colors">
+                    <AvatarFallback className="bg-slate-900 text-xs font-black text-primary font-outfit italic">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
+                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden animate-in fade-in slide-in-from-bottom-2">
+                    <p className="text-xs font-black text-white uppercase italic tracking-tighter">
                       {user?.name || "-"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
+                    <p className="text-[8px] font-mono text-slate-500 truncate mt-1 tracking-widest">
+                      {user?.email?.split('@')[0].toUpperCase()}
                     </p>
                   </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 glass-card rounded-xl p-1.5 shadow-2xl border-slate-200 dark:border-slate-800">
+              <DropdownMenuContent align="end" className="w-64 prism-panel rounded-2xl p-2 shadow-4xl border-white/10">
+                {import.meta.env.DEV && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const newRole = user?.role === "agent" ? "admin" : "agent";
+                      document.cookie = `dev_role=${newRole}; path=/; max-age=3600`;
+                      window.location.reload();
+                    }}
+                    className="cursor-pointer text-primary font-black uppercase text-[10px] tracking-widest p-4 rounded-xl hover:bg-primary/10 transition-colors"
+                  >
+                    <ArrowLeftRight className="mr-3 h-4 w-4" />
+                    <span>Switch to {user?.role === "agent" ? "Admin" : "Worker"} Deck</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
+                  className="cursor-pointer text-rose-500 font-black uppercase text-[10px] tracking-widest p-4 rounded-xl hover:bg-rose-500/10 transition-colors"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <LogOut className="mr-3 h-4 w-4" />
+                  <span>Terminate Uplink</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* MJ Signature Credits */}
+            {/* MJ Signature - Command Deck Edition */}
             {!isCollapsed && (
-              <div className="mt-6 px-2 animate-fade-in">
-                <div className="h-px w-full bg-slate-100 dark:bg-slate-800/60 mb-6 shadow-tiny" />
+              <div className="pb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <a 
                   href="https://linkedin.com/in/mathew-mabira-24861632b" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="group flex items-center justify-between p-3.5 bg-white/40 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 rounded-2xl transition-all hover:border-primary/20 hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-95 shadow-sm"
+                  className="group flex flex-col p-4 prism-panel rounded-2xl transition-all hover:border-emerald-500/30 overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
-                      <Linkedin className="h-4 w-4" />
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] italic mb-0.5 group-hover:text-primary/70 transition-colors">Designed & Built BY</span>
-                      <span className="text-sm font-black text-slate-800 dark:text-white font-outfit uppercase tracking-tighter italic shadow-primary-sm group-hover:tracking-widest transition-all">MJ</span>
-                    </div>
+                  <div className="flex items-center justify-between mb-3">
+                     <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.4em] italic group-hover:text-emerald-500 transition-colors">Digital Signature</span>
+                     <Linkedin className="h-3 w-3 text-slate-700 group-hover:text-emerald-500 transition-all opacity-30 group-hover:opacity-100" />
                   </div>
-                  <div className="h-6 w-6 rounded-lg bg-primary/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                    <LayoutDashboard className="h-3 w-3 text-primary rotate-45" />
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[10px] font-mono text-slate-400">DEV:</span>
+                    <span className="text-2xl font-black text-white font-outfit uppercase tracking-tighter italic group-hover:text-gradient-emerald selection:bg-emerald-500/30">MJ</span>
                   </div>
+                  <div className="h-[2px] w-0 bg-emerald-500 mt-2 group-hover:w-full transition-all duration-700 opacity-30" />
                 </a>
               </div>
             )}
           </SidebarFooter>
         </Sidebar>
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          className={`absolute top-0 right-[-1px] w-[2px] h-full cursor-col-resize hover:bg-primary/40 transition-all group-hover/sidebar:opacity-100 opacity-0 ${isCollapsed ? "hidden" : ""}`}
           onMouseDown={() => {
             if (isCollapsed) return;
             setIsResizing(true);
@@ -291,27 +322,22 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
+      <SidebarInset className="bg-transparent">
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
-              </div>
+          <header className="flex h-16 items-center justify-between bg-black/40 px-4 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-40">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="h-10 w-10 rounded-xl prism-panel" />
+              <h2 className="text-xs font-black text-white font-outfit uppercase italic tracking-widest">{activeMenuItem?.label}</h2>
             </div>
           </header>
         )}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10 scrollbar-hide animate-fade-in">
-          <div className="max-w-[1600px] mx-auto space-y-8">
-            {children}
+        <main className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="min-h-screen p-6 lg:p-12 animate-in fade-in duration-1000">
+            <div className="max-w-[1700px] mx-auto space-y-12">{children}</div>
           </div>
         </main>
       </SidebarInset>
-    </div>
+      {!isWorker && <FloatingAIAssistant />}
+    </>
   );
 }

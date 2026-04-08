@@ -120,7 +120,7 @@ function FloatRequestAction({
             {isProcessing ? (
               <RefreshCw className="h-3 w-3 animate-spin" />
             ) : (
-              "Transfer Float"
+              "Send Money"
             )}
           </Button>
           <Button
@@ -181,7 +181,7 @@ export default function Home() {
     {
       title: "Total Float Balance",
       value: `$${floatQuery.data ? parseFloat(floatQuery.data).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}`,
-      description: "Across all provider accounts",
+      description: "Aggregated across all provider lines",
       icon: DollarSign,
       trend: "+2.5%",
       trendUp: true,
@@ -189,9 +189,9 @@ export default function Home() {
       bg: "bg-emerald-500/10",
     },
     {
-      title: "Active Providers",
+      title: "Active Service Providers",
       value: providersQuery.data?.length || 0,
-      description: "Connected and real-time syncing",
+      description: "Live synchronisation across networks",
       icon: Zap,
       trend: "Stable",
       trendUp: true,
@@ -199,19 +199,19 @@ export default function Home() {
       bg: "bg-amber-500/10",
     },
     {
-      title: "Daily Transactions",
+      title: "Daily Transaction Volume",
       value: dailySummaryQuery.data?.transactionCount || 0,
       description: `$${dailySummaryQuery.data?.totalAmount.toLocaleString() || "0.00"} processed today`,
       icon: TrendingUp,
       trend: "+12%",
       trendUp: true,
       color: "text-blue-500",
-      bg: "bg-blue-500/10",
+      bg: "bg-blue-50/10",
     },
     {
-      title: "Pending Transfers",
+      title: "Float Top-up Requests",
       value: floatRequestsQuery.data?.length || 0,
-      description: "Capital requests from workers",
+      description: "Pending liquidity allocations for agents",
       icon: Banknote,
       trend: "+3",
       trendUp: true,
@@ -223,22 +223,22 @@ export default function Home() {
   return (
     <DashboardLayout>
       <div className="space-y-12 animate-fade-in pb-20">
-        {/* Executive Header Node */}
         <PageHeader
-          title="Executive Overview"
-          subtitle={`Welcome back, ${user?.name || "Administrator"}. Node sync active across 200+ agents.`}
-          category="Operational Telemetry"
+          title="Business Overview"
+          subtitle={`Welcome, ${user?.name || "Administrator"}. Your agent network is currently active.`}
           actions={
-            <Button className="h-12 rounded-[1.25rem] premium-gradient text-white px-8 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all">
-              <Zap className="mr-3 h-4 w-4" /> Reset Clusters
+            <Button 
+               onClick={() => {
+                 providersQuery.refetch();
+                 floatQuery.refetch();
+                 dailySummaryQuery.refetch();
+                 toast.success("System Updated");
+               }}
+               className="h-12 rounded-[1.25rem] premium-gradient text-white px-8 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all"
+            >
+              <RefreshCw className="mr-3 h-4 w-4" /> Update Data
             </Button>
           }
-          onRefresh={() => {
-            providersQuery.refetch();
-            floatQuery.refetch();
-            dailySummaryQuery.refetch();
-            toast.success("Telemetry Nodes Synchronized");
-          }}
         />
 
         {/* Global Performance Metrics */}
@@ -283,7 +283,7 @@ export default function Home() {
           <div className="lg:col-span-4 space-y-6">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-xl font-black font-outfit uppercase tracking-tight">
-                Float Liquidity Requests
+                Agent Money Requests
               </h3>
               <Badge className="bg-rose-500 text-white border-none font-black text-[10px] rounded-lg">
                 ACTION REQUIRED
@@ -317,10 +317,10 @@ export default function Home() {
           <Card className="lg:col-span-5 border-none shadow-sm dark:bg-slate-900/50 flex flex-col">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-outfit uppercase font-black">
-                Operation Telemetry
+                System Activity
               </CardTitle>
               <CardDescription className="font-inter">
-                Real-time system health and discrepancy alerts
+                Security logs and transaction alerts
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1">
@@ -387,7 +387,7 @@ export default function Home() {
                   path: "/reconciliation",
                 },
                 {
-                  label: "Worker Operations",
+                  label: "Agent Network",
                   icon: Zap,
                   color: "text-indigo-500",
                   bg: "bg-indigo-50/50",
@@ -435,11 +435,10 @@ export default function Home() {
               </div>
               <div className="relative z-10 space-y-4">
                 <h4 className="text-[10px] font-black uppercase text-emerald-500 tracking-[0.2em] italic">
-                  Network Liquidity Hub
+                  Network Money Hub
                 </h4>
                 <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  Your capital is distributed across 200+ hardware lines. Use
-                  the Float panel to manage instant fund transfers.
+                  Money is moving across your agent network. Approve money requests using the panel above.
                 </p>
                 <div className="flex items-center gap-4 pt-4">
                   <div className="flex flex-col">

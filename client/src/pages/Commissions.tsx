@@ -33,7 +33,8 @@ import {
   RefreshCw,
   MoreHorizontal,
   ChevronRight,
-  TrendingDown
+  TrendingDown,
+  Clock
 } from "lucide-react";
 
 export default function Commissions() {
@@ -68,10 +69,10 @@ export default function Commissions() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-slate-200 dark:border-slate-800">
           <div className="space-y-1.5">
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Commission Ledger
+              Commission Records
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Monitor incentive distribution and workforce performance analytics.
+              View agent commissions and performance.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -88,7 +89,7 @@ export default function Commissions() {
         <div className="grid gap-4 md:grid-cols-4 p-4 glass rounded-2xl border border-slate-200 dark:border-slate-800">
              <div className="space-y-1.5 md:col-span-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-1.5 opacity-60">
-                  <Calendar className="w-3 h-3" /> Audit Horizon Selection
+                  <Calendar className="w-3 h-3" /> Select Date Range
                 </label>
                 <div className="flex items-center gap-3">
                    <input
@@ -109,7 +110,7 @@ export default function Commissions() {
 
              <div className="flex items-end pb-0.5">
                 <Button className="w-full h-10 rounded-xl premium-gradient text-white font-bold shadow-md shadow-primary/10">
-                  Recalculate Earnings
+                  Update Commissions
                 </Button>
              </div>
 
@@ -120,27 +121,31 @@ export default function Commissions() {
              </div>
         </div>
 
-        {/* Executive Summary Cards */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {[
-            { label: "Aggregate Commission", value: `$${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, sub: report?.period || "Selected Horizon", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-            { label: "Active Workforce", value: employeeCount, sub: "Agents with throughput", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
-            { label: "Median Payout", value: `$${employeeCount > 0 ? (totalCommission / employeeCount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}`, sub: "Per assigned agent", icon: TrendingUp, color: "text-amber-500", bg: "bg-amber-500/10" },
-          ].map((stat, i) => (
-             <Card key={i} className="hover-lift border-none shadow-sm dark:bg-slate-900/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                   <div className={`p-2.5 rounded-xl ${stat.bg}`}>
-                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                   </div>
-                   <ArrowUpRight className="h-4 w-4 text-slate-300" />
-                </CardHeader>
-                <CardContent>
-                   <div className="text-3xl font-black text-slate-900 dark:text-white">{stat.value}</div>
-                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5">{stat.label}</p>
-                   <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase opacity-60 truncate">{stat.sub}</p>
-                </CardContent>
-             </Card>
-          ))}
+        <div className="grid gap-6 md:grid-cols-4">
+           <Card className="hover-lift border-none shadow-sm dark:bg-slate-900/50">
+              <CardContent className="pt-6">
+                 <div className="text-3xl font-black text-slate-900 dark:text-white">${totalCommission.toFixed(2)}</div>
+                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5">Gross Profit</p>
+              </CardContent>
+           </Card>
+           <Card className="hover-lift border-none shadow-sm dark:bg-slate-900/50 ring-2 ring-blue-500/20 shadow-blue-500/5">
+              <CardContent className="pt-6">
+                 <div className="text-3xl font-black text-blue-500">${(report?.bossShare || 0).toFixed(2)}</div>
+                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5">Boss Share (85%)</p>
+              </CardContent>
+           </Card>
+           <Card className="hover-lift border-none shadow-sm dark:bg-slate-900/50">
+              <CardContent className="pt-6">
+                 <div className="text-3xl font-black text-emerald-500">${(report?.totalPayroll || 0).toFixed(2)}</div>
+                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5">Payroll Pool (15%)</p>
+              </CardContent>
+           </Card>
+           <Card className="hover-lift border-none shadow-sm dark:bg-slate-900/50">
+              <CardContent className="pt-6">
+                 <div className="text-3xl font-black text-amber-500">${(report?.accruedCommission || 0).toFixed(2)}</div>
+                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5">Pending Payouts</p>
+              </CardContent>
+           </Card>
         </div>
 
         <div className="grid gap-10 lg:grid-cols-7">
@@ -148,8 +153,8 @@ export default function Commissions() {
           <Card className="lg:col-span-4 border-none shadow-sm dark:bg-slate-900/50">
             <CardHeader className="flex flex-row items-center justify-between">
                <div>
-                  <CardTitle className="text-xl">Workforce Earnings</CardTitle>
-                  <CardDescription>Individual agent performance and accruals</CardDescription>
+                  <CardTitle className="text-xl">Staff Earnings</CardTitle>
+                  <CardDescription>Individual performance and commission</CardDescription>
                </div>
                <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 font-bold">{employeeCount} AGENTS</Badge>
             </CardHeader>
@@ -163,9 +168,11 @@ export default function Commissions() {
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent border-slate-50 dark:border-slate-800">
-                        <TableHead className="text-xs font-bold uppercase tracking-widest">Agent Ident</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Throughput</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Net Accrual</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest">Agent ID</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Activity</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Commission</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Salary (15%)</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Method</TableHead>
                         <TableHead className="text-xs font-bold uppercase tracking-widest text-right">Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -185,13 +192,33 @@ export default function Commissions() {
                              </div>
                           </TableCell>
                           <TableCell className="text-right">
-                             <span className="text-sm font-black text-emerald-500">
+                             <span className="text-sm font-black text-slate-400">
                                ${typeof emp.totalCommission === "string" ? parseFloat(emp.totalCommission).toFixed(2) : (emp.totalCommission as number).toFixed(2)}
                              </span>
                           </TableCell>
                           <TableCell className="text-right">
+                             <span className="text-sm font-black text-emerald-500">
+                               ${typeof emp.estimatedSalary === "string" ? parseFloat(emp.estimatedSalary).toFixed(2) : (emp.estimatedSalary as number).toFixed(2)}
+                             </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                             <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-black text-slate-800 dark:text-slate-200">EC-WALLET</span>
+                                <span className="text-[8px] text-slate-400 font-mono">077112233</span>
+                             </div>
+                          </TableCell>
+                          <TableCell className="text-right">
                              <div className="flex items-center justify-end gap-3">
-                                <Badge variant="outline" className="text-[10px] font-bold text-slate-400 border-slate-200">VERIFIED</Badge>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[9px] font-black px-2 py-0 h-5 border-none uppercase tracking-tighter ${
+                                    emp.commissionBreakdown?.[0]?.payoutFrequency === "instant" 
+                                      ? "bg-emerald-500/10 text-emerald-600" 
+                                      : "bg-amber-500/10 text-amber-600"
+                                  }`}
+                                >
+                                  {emp.commissionBreakdown?.[0]?.payoutFrequency || "MONTHLY"}
+                                </Badge>
                                 <button className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-300 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
                              </div>
                           </TableCell>
@@ -261,9 +288,9 @@ export default function Commissions() {
                <div className="h-1.5 premium-gradient opacity-40 w-full" />
                <CardHeader>
                   <CardTitle className="text-xl flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" /> Allocation Flux
+                    <Zap className="h-5 w-5 text-primary" /> Commission Breakdown
                   </CardTitle>
-                  <CardDescription>Network-wide earning breakdown by flow type</CardDescription>
+                  <CardDescription>Earning breakdown by transaction type</CardDescription>
                </CardHeader>
                <CardContent className="space-y-3">
                   {["cash_out", "cash_in", "send_money", "receive_money", "bill_payment", "airtime"].map(

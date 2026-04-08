@@ -251,11 +251,10 @@ export default function Nodes() {
   return (
     <DashboardLayout>
       <div className="space-y-12 animate-fade-in pb-20 px-4 lg:px-0">
-        {/* Network Header Node */}
         <PageHeader
-          title="Network Nodes"
-          subtitle="Workforce optimization and regional hub telemetry orchestration."
-          category="Strategic Distribution"
+          title="Staff Directory"
+          subtitle="Manage your workers, branch supervisors, and regional managers."
+          category="Human Resources"
           actions={
             <div className="flex items-center gap-3">
               <Button
@@ -268,8 +267,7 @@ export default function Nodes() {
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="h-12 rounded-[1.25rem] premium-gradient text-white px-8 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all">
-                    <UserPlus className="mr-3 h-4 w-4 text-white" /> Register
-                    Personnel
+                    <UserPlus className="mr-3 h-4 w-4 text-white" /> Register New Worker
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-2xl p-0 bg-white dark:bg-[#0f172a] overflow-hidden animate-in zoom-in-95 duration-200">
@@ -280,10 +278,10 @@ export default function Nodes() {
                       </div>
                       <div className="space-y-1">
                         <DialogTitle className="text-3xl font-black font-outfit uppercase tracking-tighter italic">
-                          Personnel Registry
+                          New Worker Registration
                         </DialogTitle>
                         <DialogDescription className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                          Institutional Onboarding Node
+                          Register a new field agent to the mesh
                         </DialogDescription>
                       </div>
                     </DialogHeader>
@@ -304,7 +302,7 @@ export default function Nodes() {
                       </div>
                       <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 font-inter italic">
-                          Employee ID
+                          Agent Identity ID
                         </label>
                         <input
                           placeholder="EMP-XXXX"
@@ -459,7 +457,7 @@ export default function Nodes() {
                     <div className="space-y-8 pt-10">
                       <div className="flex items-center justify-between px-2">
                         <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.35em] italic">
-                          Identity Mesh Mapping
+                          Assigned Mobile Lines
                         </h4>
                         <div className="h-px flex-1 mx-8 bg-slate-50 dark:bg-slate-800 shadow-inner" />
                         <Layers className="h-4 w-4 text-primary opacity-30" />
@@ -512,7 +510,7 @@ export default function Nodes() {
                       onClick={handleAddAgent}
                       className="w-full h-16 rounded-[1.5rem] premium-gradient text-white font-black text-lg uppercase tracking-[0.25em] shadow-2xl shadow-primary/30 font-outfit italic flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all"
                     >
-                      Commit Personnel Entry{" "}
+                      Save Worker Records{" "}
                       <ChevronRight className="h-6 w-6" />
                     </Button>
                     <div className="flex items-center gap-6 opacity-40">
@@ -546,33 +544,33 @@ export default function Nodes() {
         <div className="grid gap-6 md:grid-cols-4">
           {[
             {
-              label: "Total Workforce",
+              label: "Field Agents",
               value: employees.length.toString(),
-              sub: "Personnel",
+              sub: "Staff",
               icon: Users2,
               color: "text-blue-500",
               bg: "bg-blue-500/10",
             },
             {
-              label: "Provider Ties",
+              label: "Active Lines",
               value: "721",
-              sub: "Active Lines",
+              sub: "Lines",
               icon: Smartphone,
               color: "text-purple-500",
               bg: "bg-purple-500/10",
             },
             {
-              label: "Network Active",
+              label: "Network Status",
               value: "99.9%",
-              sub: "Node Uptime",
+              sub: "Uptime",
               icon: Activity,
               color: "text-emerald-500",
               bg: "bg-emerald-500/10",
             },
             {
-              label: "Regional Pool",
+              label: "Total Float",
               value: "$482K",
-              sub: "Available Float",
+              sub: "Float",
               icon: Wallet,
               color: "text-amber-500",
               bg: "bg-amber-500/10",
@@ -606,10 +604,10 @@ export default function Nodes() {
           <CardHeader className="flex flex-row items-center justify-between pt-12 px-10 pb-6">
             <div className="space-y-1.5">
               <CardTitle className="text-3xl font-black font-outfit uppercase tracking-tighter italic">
-                Regional Grid Monitor
+                Branch Management Overview
               </CardTitle>
               <CardDescription className="text-xs uppercase font-bold text-slate-400 tracking-[0.2em] italic">
-                Consolidated workforce density & service mesh status
+                Consolidated agent density & national service mesh status
               </CardDescription>
             </div>
             <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-6 py-2.5 font-black text-[10px] uppercase italic tracking-[0.3em] rounded-full animate-pulse transition-all">
@@ -622,10 +620,10 @@ export default function Nodes() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-slate-50 dark:border-slate-800">
                     <TableHead className="text-xs font-black uppercase tracking-[0.25em] py-8 text-primary italic">
-                      Node Hub Identity
+                      Service Point Hub
                     </TableHead>
                     <TableHead className="text-xs font-black uppercase tracking-[0.25em] text-center italic">
-                      Personnel density
+                      Agent density
                     </TableHead>
                     <TableHead className="text-xs font-black uppercase tracking-[0.25em] text-center italic">
                       Hardware Ties
@@ -706,10 +704,10 @@ export default function Nodes() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 py-4 px-2">
             <div className="space-y-1">
               <h3 className="text-3xl font-black font-outfit uppercase tracking-tighter italic">
-                Personnel Grid
+                Staff List
               </h3>
               <p className="text-xs font-black text-slate-400 italic opacity-80 uppercase tracking-widest">
-                Active Hardware Mapping Data
+                Active Worker Information
               </p>
             </div>
             <div className="relative group max-w-xl w-full">

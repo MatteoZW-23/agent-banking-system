@@ -22,7 +22,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "supervisor"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -69,6 +69,9 @@ export const employees = mysqlTable(
     role: mysqlEnum("role", ["agent", "supervisor", "manager"]).default(
       "agent"
     ),
+    preferredPayoutMethod: mysqlEnum("payout_method", ["EcoCash", "InnBucks", "OneMoney", "Bank", "Cash"]).default("EcoCash"),
+    payoutAccountNumber: varchar("payout_account", { length: 100 }),
+    salaryPercentage: decimal("salary_percentage", { precision: 5, scale: 2 }).default("15.00"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
@@ -648,3 +651,47 @@ export const csvImports = mysqlTable(
 
 export type CsvImport = typeof csvImports.$inferSelect;
 export type InsertCsvImport = typeof csvImports.$inferInsert;
+/**
+ * Salaries table - tracks monthly payroll based on commission performance (15% rule)
+ */
+export const salaries = mysqlTable(
+  "salaries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    employeeId: int("employee_id").references(() => employees.id),
+    month: varchar("month", { length: 7 }).notNull(), // YYYY-MM
+    totalCommissionProduced: decimal("total_commission_produced", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    salaryAmount: decimal("salary_amount", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    bonusAmount: decimal("bonus_amount", { precision: 15, scale: 2 }).default(
+      "0"
+    ),
+    deductions: decimal("deductions", { precision: 15, scale: 2 }).default("0"),
+    netPayout: decimal("net_payout", { precision: 15, scale: 2 }).notNull(),
+    status: mysqlEnum("status", [
+      "pending",
+      "processing",
+      "disbursed",
+      "failed",
+    ]).default("pending"),
+    payoutReference: varchar("payout_reference", { length: 255 }),
+    disbursedAt: timestamp("disbursed_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  table => ({
+    employeeMonthIdx: unique("unique_employee_month").on(
+      table.employeeId,
+      table.month
+    ),
+    employeeIdIdx: index("idx_salary_employee").on(table.employeeId),
+    monthIdx: index("idx_salary_month").on(table.month),
+  })
+);
+
+export type Salary = typeof salaries.$inferSelect;
+export type InsertSalary = typeof salaries.$inferInsert;

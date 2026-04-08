@@ -98,9 +98,9 @@ export default function Reconciliation() {
       <div className="space-y-12 animate-fade-in pb-20">
         {/* Sync Header Node */}
         <PageHeader
-          title="Reconciliation Hub"
-          subtitle="Synchronize internal ledger records with external provider statements."
-          category="Cluster Sync"
+          title="Verify Records"
+          subtitle="Compare your records with provider statements."
+          category="Reconcile"
           actions={
             <Button
               onClick={handleReconcileAll}
@@ -112,12 +112,12 @@ export default function Reconciliation() {
               ) : (
                 <Zap className="mr-3 h-4 w-4 text-white" />
               )}
-              Reconcile Global Cluster
+              Reconcile All
             </Button>
           }
           onRefresh={() => {
             providersQuery.refetch();
-            toast.success("Gateway Handshakes Refreshed");
+            toast.success("Status updated");
           }}
         />
 
@@ -125,7 +125,7 @@ export default function Reconciliation() {
         <div className="grid gap-4 md:grid-cols-4 p-4 glass rounded-2xl border border-slate-200 dark:border-slate-800">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" /> Audit Date
+              <Calendar className="w-3 h-3" /> Select Date
             </label>
             <input
               type="date"

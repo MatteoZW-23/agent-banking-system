@@ -14,31 +14,91 @@ import SMSConfig from "@/pages/SMSConfig";
 import Nodes from "@/pages/Nodes";
 import WorkerPortal from "@/pages/WorkerPortal";
 import Settings from "@/pages/Settings";
+import LoginPage from "@/pages/LoginPage";
+import PasswordSetupPage from "@/pages/PasswordSetupPage";
+import SupervisorDashboard from "@/pages/SupervisorDashboard";
 import ComponentsShowcase from "@/pages/ComponentsShowcase";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "./_core/hooks/useAuth";
 
 function Router() {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null;
+
+  const isAdmin = user?.role === "admin";
+  const isSupervisor = user?.role === "supervisor";
+  const isAgent = user?.role === "agent";
+  const isManagement = isAdmin || isSupervisor;
+
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/transactions"} component={Transactions} />
-      <Route path={"/reconciliation"} component={Reconciliation} />
-      <Route path={"/floats"} component={Floats} />
-      <Route path={"/nodes"} component={Nodes} />
-      <Route path={"/worker"} component={WorkerPortal} />
-      <Route path={"/alerts"} component={Alerts} />
-      <Route path={"/commissions"} component={Commissions} />
-      <Route path={"/csv-import"} component={CSVImport} />
-      <Route path={"/reports"} component={Reports} />
-      <Route path={"/provider-config"} component={ProviderConfig} />
-      <Route path={"/sms-config"} component={SMSConfig} />
+      {/* Root redirection based on role */}
+      <Route path="/">
+        {() => {
+          if (!user) return <Redirect to="/login" />;
+          if (isAdmin) return <Home />;
+          if (isSupervisor) return <Redirect to="/supervisor" />;
+          return <WorkerPortal />; 
+        }}
+      </Route>
+
+      <Route path="/login" component={LoginPage} />
+
+      <Route path="/setup-password/:code" component={PasswordSetupPage} />
+
+      <Route path={"/worker"}>
+        {() => isAgent ? <WorkerPortal /> : <Redirect to="/" />}
+      </Route>
+
+      <Route path={"/supervisor"}>
+        {() => isSupervisor || isAdmin ? <SupervisorDashboard /> : <Redirect to="/" />}
+      </Route>
+
       <Route path={"/settings"} component={Settings} />
-      <Route path={"/components"} component={ComponentsShowcase} />
+
+      {/* Admin Only Routes - Strictly restricted */}
+      <Route path={"/transactions"}>
+        {() => isManagement ? <Transactions /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/reconciliation"}>
+        {() => isManagement ? <Reconciliation /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/floats"}>
+        {() => isAdmin ? <Floats /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/nodes"}>
+        {() => isAdmin ? <Nodes /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/alerts"}>
+        {() => isAdmin ? <Alerts /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/security"}>
+        {() => isAdmin ? <Alerts /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/commissions"}>
+        {() => isAdmin ? <Commissions /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/csv-import"}>
+        {() => isAdmin ? <CSVImport /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/reports"}>
+        {() => isAdmin ? <Reports /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/provider-config"}>
+        {() => isAdmin ? <ProviderConfig /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/sms-config"}>
+        {() => isAdmin ? <SMSConfig /> : <Redirect to="/404" />}
+      </Route>
+      <Route path={"/components"}>
+        {() => isAdmin ? <ComponentsShowcase /> : <Redirect to="/404" />}
+      </Route>
+      
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
+      <Route path="/:rest*" component={NotFound} />
     </Switch>
   );
 }

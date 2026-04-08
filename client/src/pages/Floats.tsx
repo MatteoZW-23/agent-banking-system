@@ -47,18 +47,18 @@ export default function Floats() {
       <div className="space-y-12 animate-fade-in pb-20">
         {/* Float Header Node */}
         <PageHeader
-          title="Float Monitoring"
-          subtitle="Real-time liquidity tracking across all payment network clusters."
-          category="Capital Distribution"
+          title="Float Management"
+          subtitle="Track your money across all provider accounts."
+          category="Floats"
           actions={
             <Button className="h-12 rounded-[1.25rem] premium-gradient text-white px-8 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all">
-              <Wallet className="mr-3 h-4 w-4" /> Inject Capital
+              <Wallet className="mr-3 h-4 w-4" /> Add Money
             </Button>
           }
           onRefresh={() => {
             providersQuery.refetch();
             totalFloatQuery.refetch();
-            toast.success("Liquidity State Recalculated");
+            toast.success("Updated");
           }}
         />
 
@@ -67,7 +67,7 @@ export default function Floats() {
           <div className="h-1.5 premium-gradient w-full" />
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2 text-[10px] font-extrabold text-primary uppercase tracking-[0.2em]">
-              <Wallet className="h-3 w-3" /> Aggregated Global Float
+              <Wallet className="h-3 w-3" /> Total Float
             </div>
           </CardHeader>
           <CardContent className="flex flex-col md:flex-row md:items-end justify-between gap-8 py-8">
@@ -79,8 +79,8 @@ export default function Floats() {
                 })}
               </div>
               <p className="text-sm font-medium text-slate-400">
-                Current liquidity status:{" "}
-                <span className="text-emerald-500 font-bold">OPTIMAL</span>{" "}
+                Current status:{" "}
+                <span className="text-emerald-500 font-bold">GOOD</span>{" "}
                 across {providersQuery.data?.length || 0} nodes.
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function Floats() {
               </div>
               <div className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  Projected Burn
+                  Days Left
                 </p>
                 <p className="text-lg font-bold text-amber-500">4.2 Days</p>
               </div>

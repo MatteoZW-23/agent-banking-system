@@ -10,6 +10,7 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   Table,
   TableBody,
@@ -32,7 +33,8 @@ import {
   XCircle,
   RefreshCw,
   SearchCode,
-  ShieldCheck
+  ShieldCheck,
+  ArrowUpRight
 } from "lucide-react";
 
 export default function Transactions() {
@@ -42,6 +44,7 @@ export default function Transactions() {
     start: new Date(new Date().setDate(new Date().getDate() - 30)),
     end: new Date(),
   });
+  const [location, setLocation] = useLocation();
 
   const providersQuery = trpc.providers.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -57,7 +60,7 @@ export default function Transactions() {
     { enabled: isAuthenticated }
   );
 
-  const getStatusColor = (status: string | null) => {
+  const getStatusBadge = (status: string | null) => {
     if (!status) return "bg-gray-100 text-gray-800";
     switch (status) {
       case "completed":
@@ -95,7 +98,7 @@ export default function Transactions() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-slate-200 dark:border-slate-800">
           <div className="space-y-1.5">
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Ledger Operations
+              Transactions
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
               Analyze and audit multi-provider transaction flows with precision.
@@ -194,13 +197,13 @@ export default function Transactions() {
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
-                        <TableHead className="font-bold text-xs uppercase tracking-wider">Ref & Origin</TableHead>
+                        <TableHead className="font-bold text-xs uppercase tracking-wider">Ref</TableHead>
                         <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
                         <TableHead className="font-bold text-xs uppercase tracking-wider">
-                           <div className="flex items-center gap-1">Net Amount <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                           <div className="flex items-center gap-1">Amount <ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                         </TableHead>
                         <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
-                        <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Audit</TableHead>
+                        <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Recon Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -265,9 +268,9 @@ export default function Transactions() {
                 <div className="h-1.5 premium-gradient w-full" />
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-rose-500" /> High-Risk Audit
+                    <AlertTriangle className="w-5 h-5 text-rose-500" /> Risk & Security Audit
                   </CardTitle>
-                  <CardDescription>Anomalies detected by the security engine</CardDescription>
+                  <CardDescription>Anomalies detected by the national security engine</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {flaggedQuery.isLoading ? (
@@ -302,7 +305,11 @@ export default function Transactions() {
                     </div>
                   )}
                   {flaggedQuery.data && flaggedQuery.data.length > 0 && (
-                    <Button variant="outline" className="w-full rounded-xl border-slate-200 mt-2 font-bold text-xs uppercase h-10">
+                    <Button 
+                      variant="outline" 
+                      className="w-full rounded-xl border-slate-200 mt-2 font-bold text-xs uppercase h-10"
+                      onClick={() => setLocation("/security")}
+                    >
                        View Security Portal
                     </Button>
                   )}

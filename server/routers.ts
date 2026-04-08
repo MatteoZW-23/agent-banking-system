@@ -1,4 +1,5 @@
-import { router, protectedProcedure } from "./_core/trpc";
+import { router, protectedProcedure, publicProcedure, adminProcedure } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   getDb,
@@ -24,30 +25,92 @@ import {
   getLatestBalanceSnapshot,
   createEmployee,
   registerAgentLine,
+  getCommissionStructures,
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
 import { alertService } from "./services/alertService";
 import { commissionService } from "./services/commissionService";
 import { csvImportService } from "./services/csvImport";
+import { liquidityOrchestrator } from "./services/liquidity";
+import { guardianService } from "./services/guardian";
 import { systemRouter } from "./_core/systemRouter";
 import { invokeLLM } from "./_core/llm";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { floatRequests } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+
+// Supervisor: admin + supervisor can access
+const supervisorProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const role = (ctx.user as any)?.role;
+  if (role !== "admin" && role !== "supervisor") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Supervisor or Admin access required." });
+  }
+  return next({ ctx });
+});
 
 export const appRouter = router({
   system: systemRouter,
 
-  // AI Assistant Router
+  // ── AUTH ──────────────────────────────────────────────────────────────
+  auth: router({
+    me: protectedProcedure.query(({ ctx }) => ctx.user),
+
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(1),
+          role: z.enum(["admin", "agent", "supervisor"]),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const allEmployees = await getAllEmployees();
+        const matched = allEmployees.find(
+          (e) => e.email?.toLowerCase() === input.email.toLowerCase()
+        );
+
+        const isAdmin = input.email === "admin@agent.co.zw" && input.password === "admin123";
+        const isDefaultSupervisor = input.email === "takudzwa@agent.co.zw" && input.password === "supervisor123";
+        const isAgent = !!matched && input.password === "agent123" && matched.role === "agent";
+        const isSupervisor =
+          (!!matched && input.password === "supervisor123" && matched.role === "supervisor") || isDefaultSupervisor;
+
+        if (!isAdmin && !isAgent && !isSupervisor) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Wrong email or password.",
+          });
+        }
+
+        // Make sure the portal matches actual credentials
+        if (input.role === "admin" && !isAdmin)
+          throw new TRPCError({ code: "FORBIDDEN", message: "These are not Admin credentials." });
+        if (input.role === "agent" && !isAgent)
+          throw new TRPCError({ code: "FORBIDDEN", message: "These are not Agent credentials." });
+        if (input.role === "supervisor" && !isSupervisor)
+          throw new TRPCError({ code: "FORBIDDEN", message: "These are not Supervisor credentials." });
+
+        ctx.res.cookie("dev_role", input.role, { path: "/", maxAge: 3600000 });
+        return { success: true, role: input.role };
+      }),
+
+    logout: protectedProcedure.mutation(({ ctx }) => {
+      ctx.res.clearCookie("dev_role", { path: "/" });
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      return { success: true };
+    }),
+  }),
+
+  // ── AI & GUARDIAN ──────────────────────────────────────────────────
   ai: router({
     chat: protectedProcedure
       .input(
         z.object({
           messages: z.array(
-            z.object({
-              role: z.enum(["system", "user", "assistant"]),
-              content: z.string(),
-            })
+            z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() })
           ),
         })
       )
@@ -58,41 +121,31 @@ export const appRouter = router({
               {
                 role: "system",
                 content:
-                  "You are the AgentTrack AI Ethical Shield (v2.0). Your mission is to protect the Agent Banking System from fraud, internal collusion, and unethical financial behavior. You have deep awareness of transaction telemetry, risk scores, and liquidity patterns. When asked, analyze data for suspicious smurfing, layering, unusual timing, or velocity breaches. Be professional, direct, and vigilant.",
+                  "You are the AgentTrack AI Ethical Shield. Help detect fraud, smurfing, and collusion in agent banking. Be professional and direct.",
               },
               ...input.messages,
             ],
           });
-
-          return (
-            response.choices[0]?.message?.content ||
-            "I'm sorry, I'm having trouble processing that request."
-          );
-        } catch (error) {
-          console.error("[AI Router] LLM Error:", error);
-          return "The AI system is temporarily unavailable. Please try again later.";
+          return response.choices[0]?.message?.content || "No response available.";
+        } catch {
+          return "AI assistant is temporarily unavailable.";
         }
+      }),
+
+    radar: supervisorProcedure
+      .input(z.object({ employeeId: z.number() }))
+      .query(async ({ input }) => {
+        return await guardianService.getLiquidityForecast(input.employeeId);
       }),
   }),
 
-  auth: router({
-    me: protectedProcedure.query(opts => opts.ctx.user),
-    logout: protectedProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
-
-  // Nodes & Workforce Monitoring
+  // ── NODES (Workforce) ──────────────────────────────────────────────
   nodes: router({
-    listBranches: protectedProcedure.query(async () => {
-      return await getAllBranches();
-    }),
-    listEmployees: protectedProcedure.query(async () => {
-      return await getAllEmployees();
-    }),
-    createEmployee: protectedProcedure
+    listBranches: protectedProcedure.query(async () => await getAllBranches()),
+
+    listEmployees: supervisorProcedure.query(async () => await getAllEmployees()),
+
+    createEmployee: adminProcedure
       .input(
         z.object({
           uniqueCode: z.string(),
@@ -105,9 +158,12 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        return await createEmployee(input);
+        const employee = await createEmployee(input);
+        console.log(`[ONBOARDING] New employee: ${input.name} (${input.uniqueCode})`);
+        return employee;
       }),
-    registerLine: protectedProcedure
+
+    registerLine: adminProcedure
       .input(
         z.object({
           employeeId: z.number(),
@@ -117,14 +173,12 @@ export const appRouter = router({
           floatAccount: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await registerAgentLine(input);
-      }),
+      .mutation(async ({ input }) => await registerAgentLine(input)),
+
     getEmployeeLines: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => {
-        return await getEmployeeRegistrations(input.employeeId);
-      }),
+      .query(async ({ input }) => await getEmployeeRegistrations(input.employeeId)),
+
     createCheckIn: protectedProcedure
       .input(
         z.object({
@@ -135,9 +189,8 @@ export const appRouter = router({
           notes: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await createCheckIn(input);
-      }),
+      .mutation(async ({ input }) => await createCheckIn(input)),
+
     checkout: protectedProcedure
       .input(
         z.object({
@@ -151,40 +204,32 @@ export const appRouter = router({
         const { checkInId, ...rest } = input;
         return await checkoutEmployee(checkInId, rest);
       }),
+
     getLatestCheckIn: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => {
-        return await getLatestCheckIn(input.employeeId);
-      }),
+      .query(async ({ input }) => await getLatestCheckIn(input.employeeId)),
 
-    // Float Requests (Worker Side)
+    // Float Requests — agent submits, supervisor/admin approves
     requestFloat: protectedProcedure
       .input(
         z.object({
           employeeId: z.number(),
           providerId: z.number(),
-          amount: z.number(),
+          amount: z.number().positive(),
           workerNotes: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await createFloatRequest(input);
-      }),
+      .mutation(async ({ input }) => await createFloatRequest(input)),
 
     myFloatRequests: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => {
-        return await getEmployeeFloatRequests(input.employeeId);
-      }),
+      .query(async ({ input }) => await getEmployeeFloatRequests(input.employeeId)),
 
-    // Admin Side Float Management
-    listFloatRequests: protectedProcedure
+    listFloatRequests: supervisorProcedure
       .input(z.object({ status: z.string().optional() }))
-      .query(async ({ input }) => {
-        return await getAllFloatRequests(input.status);
-      }),
+      .query(async ({ input }) => await getAllFloatRequests(input.status)),
 
-    processRequest: protectedProcedure
+    processRequest: supervisorProcedure
       .input(
         z.object({
           id: z.number(),
@@ -195,10 +240,22 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { id, ...rest } = input;
-        return await processFloatRequest(id, rest);
+        const result = await processFloatRequest(id, rest);
+
+        // Auto-settlement when approved
+        if (input.status === "approved") {
+          const db = await getDb();
+          if (db) {
+            const req = await db.select().from(floatRequests).where(eq(floatRequests.id, id)).limit(1);
+            if (req.length > 0) {
+              await liquidityOrchestrator.runAutoSettlement(req[0].employeeId);
+            }
+          }
+        }
+
+        return result;
       }),
 
-    // Mid-Shift Balance Updates
     updateBalances: protectedProcedure
       .input(
         z.object({
@@ -209,41 +266,44 @@ export const appRouter = router({
           updateReason: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await createBalanceSnapshot(input);
-      }),
+      .mutation(async ({ input }) => await createBalanceSnapshot(input)),
 
     getLatestSnapshot: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => {
-        return await getLatestBalanceSnapshot(input.employeeId);
-      }),
+      .query(async ({ input }) => await getLatestBalanceSnapshot(input.employeeId)),
   }),
 
-  // Provider management
+  // ── LIQUIDITY ──────────────────────────────────────────────────────
+  liquidity: router({
+    getPosition: supervisorProcedure
+      .input(z.object({ employeeId: z.number() }))
+      .query(async ({ input }) => await liquidityOrchestrator.getAgentPosition(input.employeeId)),
+
+    triggerSettlement: supervisorProcedure
+      .input(z.object({ employeeId: z.number(), threshold: z.number().optional() }))
+      .mutation(async ({ input }) =>
+        await liquidityOrchestrator.runAutoSettlement(input.employeeId, input.threshold)
+      ),
+  }),
+
+  // ── PROVIDERS ─────────────────────────────────────────────────────
   providers: router({
-    list: protectedProcedure.query(async () => {
-      return await getAllProviders();
-    }),
+    list: protectedProcedure.query(async () => await getAllProviders()),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await getProviderById(input.id);
-      }),
+      .query(async ({ input }) => await getProviderById(input.id)),
 
     health: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const provider = await getProviderById(input.id);
-        if (!provider) {
-          return { status: "not_found", healthy: false };
-        }
+        if (!provider) return { status: "not_found", healthy: false };
         return { status: "ok", healthy: true, lastSync: provider.lastSyncAt };
       }),
   }),
 
-  // Transaction management
+  // ── TRANSACTIONS ──────────────────────────────────────────────────
   transactions: router({
     listByProvider: protectedProcedure
       .input(
@@ -253,174 +313,167 @@ export const appRouter = router({
           offset: z.number().default(0),
         })
       )
-      .query(async ({ input }) => {
-        return await getTransactionsByProvider(
-          input.providerId,
-          input.limit,
-          input.offset
-        );
-      }),
+      .query(async ({ input }) =>
+        await getTransactionsByProvider(input.providerId, input.limit, input.offset)
+      ),
 
     listByDateRange: protectedProcedure
       .input(z.object({ startDate: z.date(), endDate: z.date() }))
-      .query(async ({ input }) => {
-        return await getTransactionsByDateRange(input.startDate, input.endDate);
-      }),
+      .query(async ({ input }) =>
+        await getTransactionsByDateRange(input.startDate, input.endDate)
+      ),
 
-    flaggedTransactions: protectedProcedure
+    flagged: supervisorProcedure
       .input(z.object({ limit: z.number().default(50) }))
-      .query(async ({ input }) => {
-        return await getFlaggedTransactions("flagged");
-      }),
+      .query(async () => await getFlaggedTransactions("flagged")),
 
-    analyzeTransaction: protectedProcedure
+    analyzeTransaction: supervisorProcedure
       .input(z.number())
       .mutation(async ({ input }) => {
-        return await transactionAnalysisService.analyzeTransaction(input);
+        const guardResult = await guardianService.performActiveGuard(input);
+        const llmResult = await transactionAnalysisService.analyzeTransaction(input);
+        return { guardResult, llmResult };
       }),
   }),
 
-  // Reconciliation
+  // ── RECONCILIATION ────────────────────────────────────────────────
   reconciliation: router({
-    reconcileProvider: protectedProcedure
+    reconcileProvider: supervisorProcedure
       .input(z.object({ providerId: z.number(), date: z.date() }))
-      .mutation(async ({ input }) => {
-        return await reconciliationEngine.reconcileProvider(
-          input.providerId,
-          input.date
-        );
-      }),
+      .mutation(async ({ input }) =>
+        await reconciliationEngine.reconcileProvider(input.providerId, input.date)
+      ),
 
-    reconcileAll: protectedProcedure
+    reconcileAll: supervisorProcedure
       .input(z.object({ date: z.date() }))
-      .mutation(async ({ input }) => {
-        return await reconciliationEngine.reconcileAll(input.date);
-      }),
+      .mutation(async ({ input }) => await reconciliationEngine.reconcileAll(input.date)),
   }),
 
-  // Float management
+  // ── FLOATS ────────────────────────────────────────────────────────
   floats: router({
-    getByProvider: protectedProcedure
+    getByProvider: supervisorProcedure
       .input(z.object({ providerId: z.number() }))
-      .query(async ({ input }) => {
-        return await getProviderFloats(input.providerId);
-      }),
+      .query(async ({ input }) => await getProviderFloats(input.providerId)),
 
-    getTotalBalance: protectedProcedure.query(async () => {
-      return await getTotalFloatBalance();
-    }),
+    getTotalBalance: supervisorProcedure.query(async () => await getTotalFloatBalance()),
   }),
 
-  // Alerts & Notifications
+  // ── ALERTS ────────────────────────────────────────────────────────
   alerts: router({
-    getHistory: protectedProcedure
-      .input(
-        z.object({
-          limit: z.number().default(50),
-          offset: z.number().default(0),
-        })
-      )
-      .query(async ({ input }) => {
-        return await getAlertHistory(input.limit, input.offset);
-      }),
+    getHistory: supervisorProcedure
+      .input(z.object({ limit: z.number().default(50), offset: z.number().default(0) }))
+      .query(async ({ input }) => await getAlertHistory(input.limit, input.offset)),
 
-    checkThresholds: protectedProcedure.mutation(async () => {
-      return await alertService.checkAllThresholds();
-    }),
+    checkThresholds: supervisorProcedure
+      .mutation(async () => await alertService.checkAllThresholds()),
 
-    acknowledge: protectedProcedure
+    acknowledge: supervisorProcedure
       .input(z.object({ alertId: z.number() }))
-      .mutation(async ({ input }) => {
-        return await alertService.acknowledgeAlert(input.alertId);
-      }),
+      .mutation(async ({ input, ctx }) =>
+        await alertService.acknowledgeAlert(input.alertId, ctx.user.id)
+      ),
   }),
 
-  // Commissions
+  // ── COMMISSIONS ───────────────────────────────────────────────────
   commissions: router({
-    getReport: protectedProcedure
+    getReport: adminProcedure
       .input(z.object({ startDate: z.date(), endDate: z.date() }))
-      .query(async ({ input }) => {
-        return await commissionService.generateReport(
+      .query(async ({ input }) =>
+        await commissionService.getCommissionReport(input.startDate, input.endDate)
+      ),
+
+    getEmployeeReport: supervisorProcedure
+      .input(z.object({ employeeCode: z.string(), startDate: z.date(), endDate: z.date() }))
+      .query(async ({ input }) =>
+        await commissionService.calculateEmployeeCommission(
+          input.employeeCode,
           input.startDate,
           input.endDate
-        );
-      }),
+        )
+      ),
+
+    convert: protectedProcedure
+      .input(
+        z.object({
+          employeeId: z.number(),
+          amount: z.number().positive(),
+          target: z.enum(["cash", "float"]),
+          providerId: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) =>
+        await commissionService.convertCommissionToCapital(
+          input.employeeId,
+          input.amount,
+          input.target,
+          input.providerId
+        )
+      ),
   }),
 
-  // CSV Import
+  // ── CSV IMPORT ────────────────────────────────────────────────────
   csvImport: router({
-    importTransactions: protectedProcedure
+    importTransactions: adminProcedure
       .input(z.object({ providerId: z.number(), csvContent: z.string() }))
-      .mutation(async ({ input }) => {
-        return await csvImportService.importTransactions(
-          input.providerId,
-          input.csvContent
-        );
-      }),
+      .mutation(async ({ input }) =>
+        await csvImportService.importTransactions(input.providerId, input.csvContent)
+      ),
 
-    validateCSV: protectedProcedure
+    validateCSV: adminProcedure
       .input(z.object({ providerId: z.number(), csvContent: z.string() }))
-      .query(async ({ input }) => {
-        return await csvImportService.validateFormat(
-          input.providerId,
-          input.csvContent
-        );
-      }),
+      .query(async ({ input }) =>
+        await csvImportService.validateFormat(input.providerId, input.csvContent)
+      ),
 
     getTemplate: protectedProcedure
       .input(z.object({ providerId: z.number() }))
-      .query(async ({ input }) => {
-        return await csvImportService.getTemplate(input.providerId);
-      }),
+      .query(async ({ input }) => await csvImportService.getTemplate(input.providerId)),
   }),
 
-  // Reports
+  // ── REPORTS ───────────────────────────────────────────────────────
   reports: router({
-    dailySummary: protectedProcedure
+    dailySummary: supervisorProcedure
       .input(z.object({ date: z.date() }))
       .query(async ({ input }) => {
-        const txs = await getTransactionsByDateRange(
-          new Date(input.date.setHours(0, 0, 0, 0)),
-          new Date(input.date.setHours(23, 59, 59, 999))
-        );
+        const start = new Date(input.date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(input.date);
+        end.setHours(23, 59, 59, 999);
+        const txs = await getTransactionsByDateRange(start, end);
 
         return {
           transactionCount: txs.length,
-          totalAmount: txs.reduce(
-            (sum, t) => sum + parseFloat((t.amount as any) || "0"),
-            0
-          ),
-          totalFees: txs.reduce(
-            (sum, t) => sum + parseFloat((t.fee as any) || "0"),
-            0
-          ),
-          completedCount: txs.filter(t => t.status === "completed").length,
-          failedCount: txs.filter(t => t.status === "failed").length,
+          totalAmount: txs.reduce((sum, t) => sum + parseFloat((t.amount as any) || "0"), 0),
+          totalFees: txs.reduce((sum, t) => sum + parseFloat((t.fee as any) || "0"), 0),
+          completedCount: txs.filter((t) => t.status === "completed").length,
+          failedCount: txs.filter((t) => t.status === "failed").length,
         };
       }),
 
-    providerBreakdown: protectedProcedure
+    providerBreakdown: supervisorProcedure
       .input(z.object({ date: z.date() }))
       .query(async ({ input }) => {
         const providers = await getAllProviders();
         const results = [];
-
         for (const p of providers) {
           const txs = await getTransactionsByProvider(p.id);
           results.push({
             provider: p.name,
             transactionCount: txs.length,
-            totalAmount: txs.reduce(
-              (sum, t) => sum + parseFloat((t.amount as any) || "0"),
-              0
-            ),
-            completedCount: txs.filter(t => t.status === "completed").length,
-            failedCount: txs.filter(t => t.status === "failed").length,
+            totalAmount: txs.reduce((sum, t) => sum + parseFloat((t.amount as any) || "0"), 0),
+            completedCount: txs.filter((t) => t.status === "completed").length,
+            failedCount: txs.filter((t) => t.status === "failed").length,
           });
         }
-
         return results;
       }),
+  }),
+
+  // ── COMMISSION STRUCTURES ─────────────────────────────────────────
+  commissionStructures: router({
+    getByProvider: protectedProcedure
+      .input(z.object({ providerId: z.number() }))
+      .query(async ({ input }) => await getCommissionStructures(input.providerId)),
   }),
 });
 

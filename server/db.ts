@@ -272,14 +272,30 @@ export async function getAllEmployees() {
     if (process.env.NODE_ENV === "development") {
       return [
         {
+          id: 0,
+          uniqueCode: "AGT-001",
+          branchId: 1,
+          name: "Rufaro Murwira (Test Agent)",
+          email: "agent@agent.co.zw",
+          phone: "+263771112223",
+          status: "active",
+          role: "agent",
+          preferredPayoutMethod: "EcoCash",
+          payoutAccountNumber: "0771112223",
+          salaryPercentage: "15.00"
+        },
+        {
           id: 1,
           uniqueCode: "EMP001",
           branchId: 1,
-          name: "John Doe",
-          email: "john@agent.co.zw",
+          name: "Takudzwa Machaya",
+          email: "takudzwa@agent.co.zw",
           phone: "+263771234567",
           status: "active",
           role: "agent",
+          preferredPayoutMethod: "InnBucks",
+          payoutAccountNumber: "0771234567",
+          salaryPercentage: "15.00"
         },
         {
           id: 2,
@@ -956,7 +972,37 @@ export async function getTotalFloatBalance() {
 // Commission queries
 export async function getCommissionStructures(providerId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    if (process.env.NODE_ENV === "development") {
+      const common = { providerId, isActive: true, effectiveFrom: new Date() };
+      if (providerId === 1) { // EcoCash: Tiered %
+        return [
+          { ...common, transactionType: "cash_out", commissionPercentage: "2.50", commissionFixed: "0.00", payoutFrequency: "weekly" },
+          { ...common, transactionType: "cash_in", commissionPercentage: "0.20", commissionFixed: "0.05", payoutFrequency: "instant" },
+          { ...common, transactionType: "bill_payment", commissionPercentage: "1.00", commissionFixed: "0.50", payoutFrequency: "monthly" },
+        ];
+      }
+      if (providerId === 3) { // InnBucks: Instant Flat/Semi-flat
+        return [
+          { ...common, transactionType: "cash_out", commissionPercentage: "1.50", commissionFixed: "0.20", payoutFrequency: "instant" },
+          { ...common, transactionType: "cash_in", commissionPercentage: "0.00", commissionFixed: "0.25", payoutFrequency: "instant" },
+        ];
+      }
+      if (providerId === 2) { // Omari: High % + Bonuses
+        return [
+          { ...common, transactionType: "cash_out", commissionPercentage: "3.00", commissionFixed: "0.00", payoutFrequency: "instant" },
+          { ...common, transactionType: "cash_in", commissionPercentage: "0.50", commissionFixed: "0.00", payoutFrequency: "instant" },
+        ];
+      }
+      if (providerId === 4) { // ZB Bank: Fixed Fees
+        return [
+          { ...common, transactionType: "cash_out", commissionPercentage: "0.00", commissionFixed: "2.50", payoutFrequency: "weekly" },
+          { ...common, transactionType: "cash_in", commissionPercentage: "0.00", commissionFixed: "1.00", payoutFrequency: "weekly" },
+        ];
+      }
+    }
+    return [];
+  }
   return await db
     .select()
     .from(commissionStructures)
