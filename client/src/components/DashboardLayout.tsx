@@ -266,25 +266,12 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 prism-panel rounded-2xl p-2 shadow-4xl border-white/10">
-                {import.meta.env.DEV && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      const newRole = user?.role === "agent" ? "admin" : "agent";
-                      document.cookie = `dev_role=${newRole}; path=/; max-age=3600`;
-                      window.location.reload();
-                    }}
-                    className="cursor-pointer text-primary font-black uppercase text-[10px] tracking-widest p-4 rounded-xl hover:bg-primary/10 transition-colors"
-                  >
-                    <ArrowLeftRight className="mr-3 h-4 w-4" />
-                    <span>Switch to {user?.role === "agent" ? "Admin" : "Worker"} Deck</span>
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-rose-500 font-black uppercase text-[10px] tracking-widest p-4 rounded-xl hover:bg-rose-500/10 transition-colors"
                 >
                   <LogOut className="mr-3 h-4 w-4" />
-                  <span>Terminate Uplink</span>
+                  <span>Secure Sign Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

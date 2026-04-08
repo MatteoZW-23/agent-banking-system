@@ -78,24 +78,27 @@ function FloatRequestAction({
   const provider = providersQuery.data?.find(p => p.id === request.providerId);
 
   return (
-    <div className="p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl space-y-4 hover:border-primary/20 transition-all shadow-sm">
+    <div className="p-6 bg-slate-50/50 border border-slate-100/50 rounded-[2.5rem] space-y-6 hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 transition-all group">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black shadow-inner border border-primary/5">
             {employee?.name?.[0] || "A"}
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-black text-slate-800 dark:text-white font-outfit">
+            <span className="text-[13px] font-black text-slate-900 uppercase tracking-tight font-outfit">
               {employee?.name}
             </span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {provider?.name} Line
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 italic">
+              Terminal: {provider?.name}
             </span>
           </div>
         </div>
-        <span className="text-lg font-black text-slate-900 dark:text-white font-outfit">
-          ${request.amount}
-        </span>
+        <div className="text-right">
+           <span className="text-2xl font-black text-slate-900 font-outfit italic tracking-tighter">
+             ${request.amount}
+           </span>
+           <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">Pending Sync</p>
+        </div>
       </div>
 
       {request.workerNotes && (

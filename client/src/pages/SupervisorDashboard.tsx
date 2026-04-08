@@ -61,26 +61,26 @@ export default function SupervisorDashboard() {
   const totalEmployees = employees.data?.length || 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Top Bar */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-amber-500 flex items-center justify-center">
-            <ShieldAlert className="h-5 w-5 text-white" />
+    <div className="min-h-screen bg-slate-50">
+      {/* Top Bar - Refined for Managers */}
+      <header className="bg-white border-b border-slate-100 px-8 py-6 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-5">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <ShieldAlert className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
-              Manager's Office
+            <h1 className="text-2xl font-black uppercase tracking-tighter italic text-slate-900 font-outfit">
+               Manager's<span className="text-primary not-italic">Office</span>
             </h1>
-            <p className="text-xs text-slate-500">Welcome back, {user?.name || "Manager"}</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 italic">Authorized Personnel: {user?.name}</p>
           </div>
         </div>
         <Button
-          variant="outline"
+          variant="ghost"
           onClick={logout}
-          className="text-xs font-bold uppercase tracking-widest"
+          className="h-12 px-6 rounded-2xl hover:bg-slate-50 font-black uppercase text-[10px] tracking-widest text-slate-500 hover:text-rose-500 transition-all"
         >
-          Sign Out
+          Secure Sign Out <XCircle className="ml-3 h-4 w-4" />
         </Button>
       </header>
 
@@ -92,44 +92,42 @@ export default function SupervisorDashboard() {
               label: "Pending Approvals",
               value: pendingCount,
               icon: Clock,
-              color: "text-amber-500",
-              bg: "bg-amber-50",
+              color: "text-amber-600",
+              bg: "bg-amber-50/50",
             },
             {
               label: "Active Agents",
               value: totalEmployees,
               icon: Users,
-              color: "text-blue-500",
-              bg: "bg-blue-50",
+              color: "text-primary",
+              bg: "bg-primary/5",
             },
             {
-              label: "Open Alerts",
+              label: "Security Alerts",
               value: alerts.data?.filter((a: any) => a.status === "triggered").length || 0,
               icon: AlertTriangle,
-              color: "text-rose-500",
-              bg: "bg-rose-50",
+              color: "text-rose-600",
+              bg: "bg-rose-50/50",
             },
             {
               label: "Supervisor Pool (5%)",
-              value: "Auto-calculated",
+              value: "Operational",
               icon: TrendingUp,
-              color: "text-emerald-500",
-              bg: "bg-emerald-50",
+              color: "text-slate-900",
+              bg: "bg-slate-50",
             },
           ].map((stat) => (
             <Card
               key={stat.label}
-              className="border-none shadow-lg shadow-slate-200/50 rounded-2xl bg-white"
+              className="border border-slate-100 shadow-xl shadow-slate-200/30 rounded-[2.5rem] bg-white group hover:scale-[1.02] transition-all"
             >
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-2xl ${stat.bg} flex items-center justify-center`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              <CardContent className="p-8 flex items-center gap-5">
+                <div className={`h-16 w-16 rounded-3xl ${stat.bg} flex items-center justify-center shadow-inner`}>
+                  <stat.icon className={`h-8 w-8 ${stat.color} group-hover:scale-110 transition-transform`} />
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-slate-900">{stat.value}</p>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    {stat.label}
-                  </p>
+                   <p className="text-3xl font-black text-slate-900 font-outfit italic tracking-tighter leading-none">{stat.value}</p>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">{stat.label}</p>
                 </div>
               </CardContent>
             </Card>

@@ -370,16 +370,16 @@ export default function WorkerPortal() {
                          </div>
                       </div>
                       
-                      <div className="bg-emerald-50 border border-emerald-100 p-10 rounded-[3rem] flex items-center justify-between">
+                      <div className="bg-primary/5 border border-primary/10 p-10 rounded-[3rem] flex items-center justify-between group hover:bg-primary/10 transition-all">
                          <div className="space-y-4">
-                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.3em]">Estimated Bonus (15%)</p>
+                            <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em]">Estimated Bonus (15%)</p>
                             <div className="flex items-baseline gap-3">
-                               <p className="text-5xl font-black text-emerald-700 font-outfit italic tracking-tighter">$12.42</p>
-                               <span className="text-[9px] text-emerald-600/50 font-black tracking-widest">USD</span>
+                               <p className="text-5xl font-black text-slate-900 font-outfit italic tracking-tighter">$12.42</p>
+                               <span className="text-[9px] text-slate-400 font-black tracking-widest uppercase">Net Earned</span>
                             </div>
                          </div>
-                         <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                            <Activity className="h-8 w-8 text-emerald-500" />
+                         <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/10 border border-primary/5">
+                            <Activity className="h-8 w-8 text-primary" />
                          </div>
                       </div>
                     </div>
@@ -431,7 +431,7 @@ export default function WorkerPortal() {
                     </div>
                     <Button
                       onClick={handleLiveUpdate}
-                      className="w-full h-24 rounded-[3rem] bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xl uppercase tracking-[0.3em] shadow-2xl shadow-indigo-200 transition-all font-outfit italic"
+                      className="w-full h-24 rounded-[3rem] bg-primary hover:bg-primary/90 text-white font-black text-xl uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all font-outfit italic"
                     >
                       Commit Terminal Sync <Save className="ml-5 h-7 w-7" />
                     </Button>

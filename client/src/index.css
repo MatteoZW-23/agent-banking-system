@@ -31,24 +31,46 @@
 }
 
 :root {
-  --background: oklch(0.97 0.01 260);
-  --foreground: oklch(0.15 0.02 260);
-  --card: oklch(0.99 0.005 260 / 80%);
-  --card-foreground: oklch(0.15 0.02 260);
-  --primary: oklch(0.51 0.16 262);
-  --primary-foreground: oklch(0.99 0.01 260);
-  --border: oklch(0.88 0.02 260 / 60%);
-  --radius: 1.5rem;
+  /* Highly refined Slate-Sapphire foundations */
+  --background: oklch(0.99 0.005 240);
+  --foreground: oklch(0.12 0.03 240);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.12 0.03 240);
+  --primary: oklch(0.42 0.12 240); /* Executive Deep Sapphire */
+  --primary-foreground: oklch(0.99 0.01 240);
+  --secondary: oklch(0.96 0.01 240);
+  --secondary-foreground: oklch(0.25 0.05 240);
+  --muted: oklch(0.94 0.01 240);
+  --muted-foreground: oklch(0.4 0.03 240);
+  --accent: oklch(0.92 0.02 240);
+  --accent-foreground: oklch(0.12 0.03 240);
+  --destructive: oklch(0.6 0.15 25);
+  --destructive-foreground: oklch(0.99 0.01 25);
+  --border: oklch(0.88 0.02 240 / 60%);
+  --input: oklch(0.88 0.02 240 / 40%);
+  --ring: oklch(0.42 0.12 240 / 20%);
+  --radius: 1.25rem;
 }
 
 .dark {
-  --background: oklch(0.08 0.01 260);
-  --foreground: oklch(0.98 0.01 260);
-  --card: oklch(0.12 0.02 260 / 40%);
-  --card-foreground: oklch(0.98 0.01 260);
-  --primary: oklch(0.55 0.15 262);
-  --primary-foreground: oklch(0.99 0.01 260);
-  --border: oklch(1 0 0 / 8%);
+  /* Luxury Dark Slate/Obsidian */
+  --background: oklch(0.08 0.01 240);
+  --foreground: oklch(0.97 0.01 240);
+  --card: oklch(0.1 0.02 240 / 60%);
+  --card-foreground: oklch(0.97 0.01 240);
+  --primary: oklch(0.65 0.12 240); /* Radiant Sapphire */
+  --primary-foreground: oklch(0.08 0.01 240);
+  --secondary: oklch(0.14 0.02 240);
+  --secondary-foreground: oklch(0.97 0.01 240);
+  --muted: oklch(0.14 0.02 240);
+  --muted-foreground: oklch(0.6 0.02 240);
+  --accent: oklch(0.16 0.03 240);
+  --accent-foreground: oklch(0.97 0.01 240);
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.97 0.01 25);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 8%);
+  --ring: oklch(0.65 0.12 240 / 30%);
 }
 
 @layer base {
