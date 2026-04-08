@@ -446,6 +446,13 @@ export async function registerAgentLine(data: any) {
   return { id: result.insertId, ...data };
 }
 
+export async function deleteAgentLine(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(agentRegistrations).where(eq(agentRegistrations.id, id));
+  return { id };
+}
+
 export async function getEmployeeRegistrations(employeeId: number) {
   const db = await getDb();
   if (!db) {

@@ -26,6 +26,7 @@ import {
   createEmployee,
   updateEmployee,
   registerAgentLine,
+  deleteAgentLine,
   getCommissionStructures,
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
@@ -144,6 +145,8 @@ export const appRouter = router({
   nodes: router({
     listBranches: protectedProcedure.query(async () => await getAllBranches()),
 
+    listProviders: protectedProcedure.query(async () => await getAllProviders()),
+
     listEmployees: supervisorProcedure.query(async () => await getAllEmployees()),
 
     createEmployee: supervisorProcedure
@@ -189,6 +192,10 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => await registerAgentLine(input)),
+
+    deleteLine: supervisorProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => await deleteAgentLine(input.id)),
 
     getEmployeeLines: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
