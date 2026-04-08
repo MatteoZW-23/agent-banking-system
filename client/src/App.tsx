@@ -33,8 +33,9 @@ function Router() {
 
   const isAdmin = user?.role === "admin";
   const isSupervisor = user?.role === "supervisor";
+  const isManager = user?.role === "manager";
   const isAgent = user?.role === "agent";
-  const isManagement = isAdmin || isSupervisor;
+  const isManagement = isAdmin || isSupervisor || isManager;
 
   return (
     <Switch>
@@ -43,7 +44,7 @@ function Router() {
         {() => {
           if (!user) return <Redirect to="/login" />;
           if (isAdmin) return <Home />;
-          if (isSupervisor) return <Redirect to="/supervisor" />;
+          if (isSupervisor || isManager) return <Redirect to="/supervisor" />;
           return <WorkerPortal />; 
         }}
       </Route>
@@ -57,16 +58,16 @@ function Router() {
       </Route>
 
       <Route path={"/supervisor"}>
-        {() => isSupervisor || isAdmin ? <SupervisorDashboard /> : <Redirect to="/" />}
+        {() => isManagement ? <SupervisorDashboard /> : <Redirect to="/" />}
       </Route>
       <Route path={"/supervisor/requests"}>
-        {() => isSupervisor || isAdmin ? <SupervisorRequests /> : <Redirect to="/" />}
+        {() => isManagement ? <SupervisorRequests /> : <Redirect to="/" />}
       </Route>
       <Route path={"/supervisor/team"}>
-        {() => isSupervisor || isAdmin ? <SupervisorTeam /> : <Redirect to="/" />}
+        {() => isManagement ? <SupervisorTeam /> : <Redirect to="/" />}
       </Route>
       <Route path={"/supervisor/intel"}>
-        {() => isSupervisor || isAdmin ? <SupervisorIntel /> : <Redirect to="/" />}
+        {() => isManagement ? <SupervisorIntel /> : <Redirect to="/" />}
       </Route>
 
       <Route path={"/settings"} component={Settings} />

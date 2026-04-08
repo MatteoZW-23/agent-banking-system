@@ -28,6 +28,7 @@ import {
   registerAgentLine,
   deleteAgentLine,
   getCommissionStructures,
+  getUserByEmail,
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
@@ -52,8 +53,11 @@ const supervisorProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   return next({ ctx });
 });
 
+import { mfaRouter } from "./routers/mfa";
+
 export const appRouter = router({
   system: systemRouter,
+  mfa: mfaRouter,
 
   // ── AUTH ──────────────────────────────────────────────────────────────
   auth: router({
@@ -64,7 +68,8 @@ export const appRouter = router({
         z.object({
           email: z.string().email(),
           password: z.string().min(1),
-          role: z.enum(["admin", "agent", "supervisor"]),
+          role: z.enum(["admin", "agent", "supervisor", "manager"]),
+          mfaToken: z.string().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -93,6 +98,23 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "These are not Agent credentials." });
         if (input.role === "supervisor" && !isSupervisor)
           throw new TRPCError({ code: "FORBIDDEN", message: "These are not Supervisor credentials." });
+
+        // MFA CHECK
+        const userRec = await getUserByEmail(input.email);
+        if (userRec?.mfaEnabled) {
+          if (!input.mfaToken) {
+            return { success: false, mfaRequired: true };
+          }
+          
+          const { mfaService } = await import("./services/mfaService");
+          const isValid = await mfaService.verifyToken(userRec.mfaSecret!, input.mfaToken);
+          if (!isValid) {
+            throw new TRPCError({
+              code: "UNAUTHORIZED",
+              message: "Invalid multifactor authentication code."
+            });
+          }
+        }
 
         ctx.res.cookie("dev_role", input.role, { path: "/", maxAge: 3600000 });
         return { success: true, role: input.role };

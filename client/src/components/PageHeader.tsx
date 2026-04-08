@@ -30,7 +30,7 @@ export default function PageHeader({
       <div className="space-y-2">
         <div className="flex items-center gap-3">
           <div className="h-px w-8 bg-primary/40 shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] font-inter italic opacity-70">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] font-inter italic">
             {category} • Node Sync Active
           </span>
         </div>
@@ -39,16 +39,16 @@ export default function PageHeader({
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white font-outfit uppercase italic leading-none">
             {title}
           </h1>
-          <p className="text-sm md:text-base font-black text-slate-400 dark:text-slate-500 font-inter uppercase tracking-widest italic opacity-60">
+          <p className="text-sm md:text-base font-semibold text-slate-600 dark:text-slate-400 font-inter uppercase tracking-widest italic">
             {subtitle}
           </p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-white/40 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm backdrop-blur-sm">
+        <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm">
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20" />
-          <span className="text-[10px] h-4 font-black font-outfit uppercase tracking-widest text-slate-800 dark:text-white leading-none">
+          <span className="text-[10px] h-4 font-black font-outfit uppercase tracking-widest text-slate-700 dark:text-white leading-none">
             {currentDate} Hub Live
           </span>
         </div>

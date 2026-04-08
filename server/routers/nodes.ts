@@ -1,10 +1,12 @@
 import { router, protectedProcedure, adminProcedure, supervisorProcedure } from "../_core/trpc";
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
+import {
   getAllBranches,
   getAllEmployees,
   createEmployee,
+  updateEmployee,
   registerAgentLine,
+  deleteAgentLine,
   getEmployeeRegistrations,
   createCheckIn,
   checkoutEmployee,

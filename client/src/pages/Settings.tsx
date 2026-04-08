@@ -33,11 +33,201 @@ import PageHeader from "@/components/PageHeader";
 import { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { 
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+
+function MFAConfig({ user }: { user: any }) {
+  const utils = trpc.useUtils();
+  const [showSetup, setShowSetup] = useState(false);
+  const [token, setToken] = useState("");
+  
+  const setupQuery = trpc.mfa.setup.useQuery(undefined, {
+    enabled: showSetup && !user?.mfaEnabled,
+    refetchOnWindowFocus: false
+  });
+
+  const enableMutation = trpc.mfa.enable.useMutation({
+    onSuccess: () => {
+      toast.success("Multifactor Authentication Active", {
+        description: "Your account is now protected by a secondary identity node."
+      });
+      setShowSetup(false);
+      setToken("");
+      utils.auth.me.invalidate();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const disableMutation = trpc.mfa.disable.useMutation({
+    onSuccess: () => {
+      toast.success("MFA Disabled", {
+        description: "Security protocols have been reverted to single-factor."
+      });
+      setShowSetup(false);
+      setToken("");
+      utils.auth.me.invalidate();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  if (user?.mfaEnabled) {
+    return (
+      <div className="space-y-4">
+        <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2rem] flex items-center justify-between group">
+           <div className="flex items-center gap-6">
+              <div className="h-14 w-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                 <Smartphone className="h-7 w-7" />
+              </div>
+              <div className="space-y-1">
+                 <h4 className="text-lg font-black font-outfit uppercase italic tracking-tighter text-slate-900 dark:text-white">Multifactor Active</h4>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic leading-none">Account secured by terminal-sync token</p>
+              </div>
+           </div>
+           <Button 
+            variant="ghost" 
+            onClick={() => setShowSetup(!showSetup)}
+            className="h-12 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest text-rose-500 hover:bg-rose-50"
+           >
+              {showSetup ? "Cancel" : "Disable Protocol"}
+           </Button>
+        </div>
+
+        {showSetup && (
+          <div className="p-8 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] space-y-8 animate-in zoom-in-95 duration-300">
+             <div className="space-y-2">
+                <h5 className="text-sm font-black uppercase text-slate-900 dark:text-white italic">Confirm Deactivation</h5>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-loose">Enter your 6-digit backup code or current token to disable MFA.</p>
+             </div>
+             
+             <div className="flex justify-center">
+                <InputOTP maxLength={6} value={token} onChange={setToken}>
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+             </div>
+
+             <Button 
+              onClick={() => disableMutation.mutate({ token })}
+              disabled={token.length !== 6 || disableMutation.isPending}
+              className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest transition-all"
+             >
+                Confirm Security Revocation
+             </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Button
+        variant="outline"
+        onClick={() => setShowSetup(!showSetup)}
+        className="w-full h-16 rounded-2xl border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-between px-8 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all font-black text-xs uppercase tracking-widest"
+      >
+        <span className="flex items-center gap-4">
+          <Smartphone className="w-4 h-4 text-primary" /> MFA
+          Node Configuration
+        </span>
+        <Badge className="bg-slate-100 text-slate-400 border-none">
+          INACTIVE
+        </Badge>
+      </Button>
+
+      {showSetup && (
+        <div className="p-10 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-[3rem] space-y-10 animate-in slide-in-from-top-4 duration-500">
+           <div className="flex items-center gap-6 border-b border-slate-50 dark:border-slate-900 pb-8">
+              <div className="h-16 w-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border border-primary/20">
+                 <ShieldCheck className="h-8 w-8 text-primary" />
+              </div>
+              <div className="space-y-1">
+                 <h4 className="text-xl font-black font-outfit uppercase italic tracking-tighter text-slate-900 dark:text-white">Secure Account Node</h4>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] italic">Scan via Google Authenticator or Microsoft Auth</p>
+              </div>
+           </div>
+
+           {setupQuery.isLoading ? (
+             <div className="h-48 flex items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+             </div>
+           ) : setupQuery.data && (
+              <div className="space-y-10">
+                 <div className="flex flex-col md:flex-row items-center gap-10">
+                    <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-2xl">
+                       <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupQuery.data.uri)}`}
+                        alt="MFA QR Code"
+                        className="w-40 h-40"
+                       />
+                    </div>
+                    <div className="flex-1 space-y-6">
+                       <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Manual Setup Secret</label>
+                          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono text-sm font-bold text-center tracking-widest border border-slate-100 dark:border-slate-800">
+                             {setupQuery.data.secret}
+                          </div>
+                       </div>
+                       <p className="text-[10px] text-slate-500 leading-relaxed font-medium italic">
+                          Scan the code with your authentication app and enter the 6-digit sync token provided to finalize the handshake.
+                       </p>
+                    </div>
+                 </div>
+
+                 <div className="space-y-6 pt-6 border-t border-slate-50 dark:border-slate-900 text-center">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic mb-4 block">Verification Handshake</label>
+                    <div className="flex justify-center">
+                      <InputOTP maxLength={6} value={token} onChange={setToken}>
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                        </InputOTPGroup>
+                        <InputOTPSeparator />
+                        <InputOTPGroup>
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+
+                    <Button 
+                      onClick={() => enableMutation.mutate({ secret: setupQuery.data!.secret, token })}
+                      disabled={token.length !== 6 || enableMutation.isPending}
+                      className="w-full h-16 rounded-[1.5rem] premium-gradient text-white font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all mt-6"
+                    >
+                      {enableMutation.isPending ? "Validating Protocol..." : "Activate Security Node"}
+                    </Button>
+                 </div>
+              </div>
+           )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin" || user?.role === "manager" || user?.role === "supervisor";
+  const isSystemAdmin = user?.role === "admin";
+  const isManagement = isSystemAdmin || user?.role === "manager" || user?.role === "supervisor";
 
   return (
     <DashboardLayout>
@@ -45,9 +235,9 @@ export default function Settings() {
         {/* Core Config Header Node */}
         <PageHeader
           title="Settings"
-          subtitle={isAdmin ? "Manage your payments, SMS, and security settings." : "Manage your personal profile and appearance."}
+          subtitle={isManagement ? "Manage your payments, SMS, and security settings." : "Manage your personal profile and appearance."}
           category="System"
-          actions={isAdmin && (
+          actions={isSystemAdmin && (
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -70,7 +260,7 @@ export default function Settings() {
             >
               <User className="w-4 h-4 mr-3" /> General
             </TabsTrigger>
-            {isAdmin && (
+            {isSystemAdmin && (
               <>
                 <TabsTrigger
                   value="gateways"
@@ -109,24 +299,24 @@ export default function Settings() {
               <Card className="border-none shadow-sm dark:bg-slate-900/50 rounded-[2.5rem] overflow-hidden group">
                 <CardHeader className="pt-10 px-10 pb-6">
                   <CardTitle className="text-2xl font-black font-outfit uppercase italic tracking-tighter">
-                    {isAdmin ? "Organization Profile" : "Personal Profile"}
+                    {isSystemAdmin ? "Organization Profile" : "Personal Profile"}
                   </CardTitle>
                   <CardDescription className="text-xs uppercase font-bold text-slate-400 tracking-[0.2em] italic">
-                    {isAdmin ? "Identity nodes for receipts & reporting" : "Your agent identification & corporate identity"}
+                    {isSystemAdmin ? "Identity nodes for receipts & reporting" : "Your agent identification & corporate identity"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="px-10 pb-12 space-y-8">
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 font-inter italic">
-                      {isAdmin ? "Enterprise Name" : "Full Name"}
+                      {isSystemAdmin ? "Enterprise Name" : "Full Name"}
                     </label>
                     <input
-                      readOnly={!isAdmin}
-                      defaultValue={isAdmin ? "AgentTrack Global" : user?.name}
+                      readOnly={!isSystemAdmin}
+                      defaultValue={isSystemAdmin ? "AgentTrack Global" : user?.name}
                       className="w-full h-14 px-6 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 rounded-2xl font-black text-sm transition-all focus:ring-8 focus:ring-primary/5 focus:border-primary/20 outline-none text-slate-800 dark:text-white font-outfit shadow-inner"
                     />
                   </div>
-                  {isAdmin && (
+                  {isSystemAdmin && (
                     <div className="space-y-3">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 font-inter italic">
                         Headquarters City
@@ -138,7 +328,7 @@ export default function Settings() {
                       </select>
                     </div>
                   )}
-                  <Button disabled={!isAdmin} className="w-full h-14 rounded-2xl premium-gradient text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                  <Button disabled={!isSystemAdmin} className="w-full h-14 rounded-2xl premium-gradient text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
                     Update Profile
                   </Button>
                 </CardContent>
@@ -147,14 +337,14 @@ export default function Settings() {
               <Card className="border-none shadow-sm dark:bg-slate-900/50 rounded-[2.5rem] overflow-hidden group">
                 <CardHeader className="pt-10 px-10 pb-6">
                   <CardTitle className="text-2xl font-black font-outfit uppercase italic tracking-tighter">
-                    {isAdmin ? "Regional Formatting" : "Session Identity"}
+                    {isSystemAdmin ? "Regional Formatting" : "Session Identity"}
                   </CardTitle>
                   <CardDescription className="text-xs uppercase font-bold text-slate-400 tracking-[0.2em] italic">
-                    {isAdmin ? "Currency & date localized telemetry" : "Your active identity for current sessions"}
+                    {isSystemAdmin ? "Currency & date localized telemetry" : "Your active identity for current sessions"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="px-10 pb-12 space-y-8">
-                  {isAdmin ? (
+                  {isSystemAdmin ? (
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 font-inter italic">
@@ -187,7 +377,7 @@ export default function Settings() {
                       </div>
                     </div>
                   )}
-                  {isAdmin && (
+                  {isSystemAdmin && (
                     <div className="p-6 bg-slate-50/50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
                       <div className="space-y-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-inter italic">
@@ -350,20 +540,7 @@ export default function Settings() {
                         </span>
                         <ChevronRight className="w-4 h-4 opacity-30" />
                       </Button>
-                      {isAdmin && (
-                        <Button
-                          variant="outline"
-                          className="w-full h-16 rounded-2xl border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-between px-8 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all font-black text-xs uppercase tracking-widest"
-                        >
-                          <span className="flex items-center gap-4">
-                            <Smartphone className="w-4 h-4 text-primary" /> MFA
-                            Node Configuration
-                          </span>
-                          <Badge className="bg-primary/10 text-primary border-none">
-                            ACTIVE
-                          </Badge>
-                        </Button>
-                      )}
+                      <MFAConfig user={user} />
                       <div className="p-8 bg-slate-50 dark:bg-slate-950 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-6 group hover:border-primary/20 transition-all">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
@@ -372,28 +549,28 @@ export default function Settings() {
                             </div>
                             <div className="space-y-1">
                               <h5 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
-                                {isAdmin ? "Strict KYC Enforcement" : "Verified Identity Node"}
+                                {isSystemAdmin ? "Strict KYC Enforcement" : "Verified Identity Node"}
                               </h5>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                                {isAdmin ? "Mandatory ID for TX > $500" : "Your KYC Status: AUTHENTICATED"}
+                                {isSystemAdmin ? "Mandatory ID for TX > $500" : "Your KYC Status: AUTHENTICATED"}
                               </p>
                             </div>
                           </div>
-                          {isAdmin && (
+                          {isSystemAdmin && (
                             <div className="h-6 w-12 rounded-full bg-primary p-1 flex justify-end items-center cursor-pointer">
                               <div className="h-4 w-4 rounded-full bg-white shadow-sm" />
                             </div>
                           )}
                         </div>
                         <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic border-t border-slate-100 dark:border-slate-800 pt-4">
-                          {isAdmin 
+                          {isSystemAdmin 
                             ? "When enabled, agents will be blocked from processing high-value transactions without a scanned ID record."
                             : "Your identity has been verified by the Hub Supervisor for active terminal operation."}
                         </p>
                       </div>
                     </div>
                   </div>
-                  {isAdmin && (
+                  {isSystemAdmin && (
                     <div className="space-y-8">
                       <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.4em] italic mb-6">
                         Data Governance

@@ -33,14 +33,14 @@ export async function createContext(
         devRoleOverride = process.env.DEV_ROLE;
       }
 
-      const role = devRoleOverride === "agent" ? "agent" : devRoleOverride === "supervisor" ? "supervisor" : "admin";
+      const role = devRoleOverride === "agent" ? "agent" : devRoleOverride === "supervisor" ? "supervisor" : devRoleOverride === "manager" ? "manager" : "admin";
       const isAgent = role === "agent";
-      const isSupervisor = role === "supervisor";
+      const isSupervisor = role === "supervisor" || role === "manager";
       
       user = {
         id: 1,
         openId: "dev-owner-id",
-        name: isAgent ? "Dev Agent" : isSupervisor ? "Dev Supervisor" : "Dev Admin",
+        name: isAgent ? "Dev Agent" : isSupervisor ? "Dev Manager" : "Dev Admin",
         email: isAgent ? "agent@agent.co.zw" : isSupervisor ? "takudzwa@agent.co.zw" : "admin@agent.co.zw",
         role: role as any,
         createdAt: new Date(),

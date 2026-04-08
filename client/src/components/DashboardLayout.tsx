@@ -21,18 +21,18 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { 
-  LayoutDashboard, 
-  LogOut, 
-  PanelLeft, 
-  ArrowLeftRight, 
-  ClipboardCheck, 
-  Wallet, 
-  Bell, 
-  BadgePercent, 
-  FileUp, 
-  FileChartLine, 
-  Settings, 
+import {
+  LayoutDashboard,
+  LogOut,
+  PanelLeft,
+  ArrowLeftRight,
+  ClipboardCheck,
+  Wallet,
+  Bell,
+  BadgePercent,
+  FileUp,
+  FileChartLine,
+  Settings,
   MessageSquareShare,
   ShieldCheck,
   Building2,
@@ -154,14 +154,14 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  
+
   const isWorker = user?.role === "agent";
   const isSupervisor = user?.role === "supervisor";
-  
-  const menuItems = isWorker 
-    ? workerMenuItems 
-    : isSupervisor 
-      ? supervisorMenuItems 
+
+  const menuItems = isWorker
+    ? workerMenuItems
+    : isSupervisor
+      ? supervisorMenuItems
       : adminMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
@@ -207,7 +207,7 @@ function DashboardLayoutContent({
       <div className="relative group/sidebar" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-white/5 bg-transparent backdrop-blur-2xl"
+          className="border-r border-slate-200 !bg-[#0F172A] shadow-xl"
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-24 justify-center px-6">
@@ -220,13 +220,22 @@ function DashboardLayoutContent({
                 <PanelLeft className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
               </button>
               {!isCollapsed ? (
-                <div className="flex flex-col gap-0.5 min-w-0 animate-in fade-in slide-in-from-left-4 duration-500">
-                  <span className="text-xl font-black text-white italic tracking-tighter uppercase font-outfit">
-                    Branch
-                  </span>
-                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-[0.4em]">Operations_01</span>
+                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
+                  <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center border border-white/10 shadow-lg overflow-hidden shrink-0">
+                    <img src="/user_logo.jpg" alt="MJ Logo" className="w-full h-full object-cover scale-150" />
+                  </div>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-xl font-black text-white italic tracking-tighter uppercase font-outfit">
+                      Sovereign
+                    </span>
+                    <span className="text-[8px] font-mono text-blue-400 uppercase tracking-[0.4em]">Operations_01</span>
+                  </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center border border-white/10 shadow-lg overflow-hidden">
+                  <img src="/user_logo.jpg" alt="MJ Logo" className="w-full h-full object-cover scale-150" />
+                </div>
+              )}
             </div>
           </SidebarHeader>
 
@@ -240,11 +249,10 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-12 rounded-xl transition-all duration-300 ${
-                        isActive 
-                        ? "prism-panel !bg-primary/20 text-white font-black shadow-[0_0_20px_rgba(139,92,246,0.15)] border-primary/30" 
-                        : "text-slate-500 hover:text-slate-200 hover:bg-white/5"
-                      }`}
+                      className={`h-12 rounded-xl transition-all duration-300 ${isActive
+                        ? "bg-[#1A56DB]/20 text-white font-black border border-[#1A56DB]/30"
+                        : "text-slate-400 hover:text-white hover:bg-white/8"
+                        }`}
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary scale-110" : ""}`}
@@ -263,7 +271,7 @@ function DashboardLayoutContent({
           <SidebarFooter className="p-4 gap-6">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-4 rounded-2xl p-3 prism-panel hover:bg-white/10 transition-all w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none group">
+                <button className="flex items-center gap-4 rounded-2xl p-3 bg-white/5 border border-white/10 hover:bg-white/10 transition-all w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none group">
                   <Avatar className="h-10 w-10 border-2 border-white/5 shrink-0 group-hover:border-primary transition-colors">
                     <AvatarFallback className="bg-slate-900 text-xs font-black text-primary font-outfit italic">
                       {user?.name?.charAt(0).toUpperCase()}
@@ -293,18 +301,18 @@ function DashboardLayoutContent({
             {/* MJ Signature - Command Deck Edition */}
             {!isCollapsed && (
               <div className="pb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <a 
-                  href="https://linkedin.com/in/mathew-mabira-24861632b" 
-                  target="_blank" 
+                <a
+                  href="https://linkedin.com/in/mathew-mabira-24861632b"
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex flex-col p-4 prism-panel rounded-2xl transition-all hover:border-emerald-500/30 overflow-hidden"
+                  className="group flex flex-col p-4 bg-white/5 border border-white/10 rounded-2xl transition-all hover:border-emerald-500/30 overflow-hidden"
                 >
                   <div className="flex items-center justify-between mb-3">
-                     <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.4em] italic group-hover:text-emerald-500 transition-colors">Developer Verification</span>
-                     <Linkedin className="h-3 w-3 text-slate-700 group-hover:text-emerald-500 transition-all opacity-30 group-hover:opacity-100" />
+                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-[0.4em] italic group-hover:text-emerald-400 transition-colors">Developer Verification</span>
+                    <Linkedin className="h-3 w-3 text-slate-400 group-hover:text-emerald-400 transition-all opacity-50 group-hover:opacity-100" />
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[10px] font-mono text-slate-400">DEV:</span>
+                    <span className="text-[10px] font-mono text-slate-300">DEV:</span>
                     <span className="text-2xl font-black text-white font-outfit uppercase tracking-tighter italic group-hover:text-gradient-emerald selection:bg-emerald-500/30">MJ</span>
                   </div>
                   <div className="h-[2px] w-0 bg-emerald-500 mt-2 group-hover:w-full transition-all duration-700 opacity-30" />
@@ -323,9 +331,9 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="bg-transparent">
+      <SidebarInset className="bg-blue-50">
         {isMobile && (
-          <header className="flex h-16 items-center justify-between bg-black/40 px-4 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-40">
+          <header className="flex h-16 items-center justify-between bg-[#0F172A] px-4 border-b border-white/5 sticky top-0 z-40">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="h-10 w-10 rounded-xl prism-panel" />
               <h2 className="text-xs font-black text-white font-outfit uppercase italic tracking-widest">{activeMenuItem?.label}</h2>
