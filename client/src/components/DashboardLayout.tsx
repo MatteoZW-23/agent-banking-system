@@ -63,6 +63,14 @@ const workerMenuItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
+const supervisorMenuItems = [
+  { icon: LayoutDashboard, label: "Operations Hub", path: "/supervisor" },
+  { icon: Wallet, label: "Money Requests", path: "/supervisor/requests" },
+  { icon: Users2, label: "Team Management", path: "/supervisor/team" },
+  { icon: ShieldCheck, label: "Security Intel", path: "/supervisor/intel" },
+  { icon: Settings, label: "Settings", path: "/settings" },
+];
+
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
@@ -148,7 +156,13 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   
   const isWorker = user?.role === "agent";
-  const menuItems = isWorker ? workerMenuItems : adminMenuItems;
+  const isSupervisor = user?.role === "supervisor";
+  
+  const menuItems = isWorker 
+    ? workerMenuItems 
+    : isSupervisor 
+      ? supervisorMenuItems 
+      : adminMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 

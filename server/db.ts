@@ -422,6 +422,18 @@ export async function createEmployee(data: any) {
   return { id: result.insertId, ...employeeData };
 }
 
+export async function updateEmployee(id: number, data: any) {
+  const db = await getDb();
+  if (!db) {
+    if (process.env.NODE_ENV === "development") {
+      return { id, ...data };
+    }
+    return null;
+  }
+  await db.update(employees).set(data).where(eq(employees.id, id));
+  return { id, ...data };
+}
+
 export async function registerAgentLine(data: any) {
   const db = await getDb();
   if (!db) {

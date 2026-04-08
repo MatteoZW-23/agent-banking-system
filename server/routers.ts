@@ -24,6 +24,7 @@ import {
   createBalanceSnapshot,
   getLatestBalanceSnapshot,
   createEmployee,
+  updateEmployee,
   registerAgentLine,
   getCommissionStructures,
 } from "./db";
@@ -161,6 +162,20 @@ export const appRouter = router({
         const employee = await createEmployee(input);
         console.log(`[ONBOARDING] New employee: ${input.name} (${input.uniqueCode})`);
         return employee;
+      }),
+    updateEmployee: supervisorProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["active", "inactive", "suspended"]),
+          name: z.string().optional(),
+          email: z.string().email().optional(),
+          phone: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return await updateEmployee(id, data);
       }),
 
     registerLine: supervisorProcedure
@@ -417,7 +432,7 @@ export const appRouter = router({
       end.setHours(23, 59, 59, 999);
       const report = await commissionService.getCommissionReport(start, end);
       return {
-        dailyPool: parseFloat(report.totalCommissions || "0") * 0.05,
+        dailyPool: parseFloat((report as any).totalCommission || "0") * 0.05,
         currency: "USD",
         status: "Accumulating"
       };

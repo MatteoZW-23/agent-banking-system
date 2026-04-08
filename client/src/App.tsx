@@ -17,6 +17,9 @@ import Settings from "@/pages/Settings";
 import LoginPage from "@/pages/LoginPage";
 import PasswordSetupPage from "@/pages/PasswordSetupPage";
 import SupervisorDashboard from "@/pages/SupervisorDashboard";
+import SupervisorRequests from "@/pages/SupervisorRequests";
+import SupervisorTeam from "@/pages/SupervisorTeam";
+import SupervisorIntel from "@/pages/SupervisorIntel";
 import ComponentsShowcase from "@/pages/ComponentsShowcase";
 import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -55,6 +58,15 @@ function Router() {
 
       <Route path={"/supervisor"}>
         {() => isSupervisor || isAdmin ? <SupervisorDashboard /> : <Redirect to="/" />}
+      </Route>
+      <Route path={"/supervisor/requests"}>
+        {() => isSupervisor || isAdmin ? <SupervisorRequests /> : <Redirect to="/" />}
+      </Route>
+      <Route path={"/supervisor/team"}>
+        {() => isSupervisor || isAdmin ? <SupervisorTeam /> : <Redirect to="/" />}
+      </Route>
+      <Route path={"/supervisor/intel"}>
+        {() => isSupervisor || isAdmin ? <SupervisorIntel /> : <Redirect to="/" />}
       </Route>
 
       <Route path={"/settings"} component={Settings} />
