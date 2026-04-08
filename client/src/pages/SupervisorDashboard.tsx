@@ -28,14 +28,13 @@ function AgentEnrollmentForm({ onEnroll }: { onEnroll: () => void }) {
     name: "",
     email: "",
     phone: "",
-    uniqueCode: "",
     branchId: 1, // Defaulting to first branch for now
   });
 
   const createMutation = trpc.nodes.createEmployee.useMutation({
     onSuccess: () => {
       toast.success("New Agent Enrolled Successfully");
-      setFormData({ name: "", email: "", phone: "", uniqueCode: "", branchId: 1 });
+      setFormData({ name: "", email: "", phone: "", branchId: 1 });
       onEnroll();
     },
     onError: (err) => toast.error(err.message),
@@ -61,18 +60,11 @@ function AgentEnrollmentForm({ onEnroll }: { onEnroll: () => void }) {
       </CardHeader>
       <CardContent className="p-8">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <Input 
               placeholder="Full Legal Name" 
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
-              className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white transition-all font-bold text-xs"
-              required 
-            />
-            <Input 
-              placeholder="Unique Staff ID (e.g AGT-05)" 
-              value={formData.uniqueCode}
-              onChange={e => setFormData({...formData, uniqueCode: e.target.value})}
               className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white transition-all font-bold text-xs"
               required 
             />

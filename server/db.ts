@@ -398,19 +398,28 @@ export async function getAllEmployees() {
 }
 
 export async function createEmployee(data: any) {
+  // Auto-generate unique Staff ID if not provided (for security linking)
+  const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+  const staffId = `AGT-${randomSuffix}`;
+  
+  const employeeData = {
+    ...data,
+    uniqueCode: staffId,
+    status: "active",
+  };
+
   const db = await getDb();
   if (!db) {
     if (process.env.NODE_ENV === "development") {
       return {
         id: Math.floor(Math.random() * 1000),
-        ...data,
-        status: "active",
+        ...employeeData,
       };
     }
     return null;
   }
-  const [result] = await db.insert(employees).values(data);
-  return { id: result.insertId, ...data };
+  const [result] = await db.insert(employees).values(employeeData);
+  return { id: result.insertId, ...employeeData };
 }
 
 export async function registerAgentLine(data: any) {
