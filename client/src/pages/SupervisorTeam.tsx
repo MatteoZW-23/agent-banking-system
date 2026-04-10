@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users2, UserPlus, ShieldX, Phone, Mail, MapPin, Search, Settings, XCircle } from "lucide-react";
+import { Users2, UserPlus, ShieldX, Phone, Mail, MapPin, Search, Settings, XCircle, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import PageHeader from "@/components/PageHeader";
 
 function AgentEnrollmentForm({ onEnroll }: { onEnroll: () => void }) {
   const [formData, setFormData] = useState({
@@ -18,7 +19,7 @@ function AgentEnrollmentForm({ onEnroll }: { onEnroll: () => void }) {
 
   const createMutation = trpc.nodes.createEmployee.useMutation({
     onSuccess: () => {
-      toast.success("New Agent Enrolled Successfully");
+      toast.success("Agent enrolled successfully");
       setFormData({ name: "", email: "", phone: "", branchId: 1 });
       onEnroll();
     },
@@ -31,56 +32,56 @@ function AgentEnrollmentForm({ onEnroll }: { onEnroll: () => void }) {
   };
 
   return (
-    <Card className="border border-slate-100 dark:border-white/5 shadow-2xl shadow-slate-200/40 dark:shadow-none rounded-[3rem] bg-white dark:bg-slate-900 overflow-hidden">
-      <CardHeader className="bg-slate-50/50 dark:bg-white/5 p-10 border-b border-slate-100 dark:border-white/5">
-        <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-             <UserPlus className="h-8 w-8 text-primary" />
+    <Card className="border border-gray-200 dark:border-slate-700 shadow-sm">
+      <CardHeader className="pb-4 border-b border-gray-100 dark:border-slate-700">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <UserPlus className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <CardTitle className="text-3xl font-black uppercase tracking-tighter font-outfit italic">Agent Enrollment</CardTitle>
-            <CardDescription className="text-[11px] font-bold uppercase tracking-[0.3em] mt-2 text-slate-400">Expand your regional network footprint</CardDescription>
+            <CardTitle className="text-lg">Enroll Agent</CardTitle>
+            <CardDescription className="text-xs">Add a new member to your team</CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-10">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-             <div className="space-y-3">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 italic">Legal Identity</label>
-               <Input 
-                 placeholder="FULL NAME..." 
-                 value={formData.name}
-                 onChange={e => setFormData({...formData, name: e.target.value})}
-                 className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border-transparent focus:bg-white dark:focus:bg-white/10 transition-all font-black text-xs uppercase italic px-6"
-                 required 
-               />
-             </div>
-             <div className="space-y-3">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 italic">Communication</label>
-               <Input 
-                 placeholder="OFFICIAL EMAIL..." 
-                 type="email"
-                 value={formData.email}
-                 onChange={e => setFormData({...formData, email: e.target.value})}
-                 className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border-transparent focus:bg-white dark:focus:bg-white/10 transition-all font-black text-xs uppercase italic px-6"
-               />
-             </div>
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-500">Full Name</label>
+              <Input 
+                placeholder="Enter name..." 
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                className="h-10 rounded-lg bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-sm"
+                required 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-500">Email</label>
+              <Input 
+                placeholder="email@company.co.zw" 
+                type="email"
+                value={formData.email}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+                className="h-10 rounded-lg bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-sm"
+              />
+            </div>
           </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 italic">Direct Reach</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-gray-500">Phone</label>
             <Input 
-              placeholder="PHONE NUMBER (+263...)" 
+              placeholder="+263 7..." 
               value={formData.phone}
               onChange={e => setFormData({...formData, phone: e.target.value})}
-              className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border-transparent focus:bg-white dark:focus:bg-white/10 transition-all font-black text-xs uppercase italic px-6"
+              className="h-10 rounded-lg bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-sm"
             />
           </div>
           <Button 
             disabled={createMutation.isPending}
-            className="w-full h-16 rounded-2xl premium-gradient text-white font-black uppercase tracking-[0.3em] text-[11px] shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-all mt-4 italic"
+            className="w-full h-11 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm mt-2"
           >
-            {createMutation.isPending ? "Validating Credentials..." : "Authorize Network Onboarding"}
+            {createMutation.isPending ? "Enrolling..." : "Enroll Agent"}
           </Button>
         </form>
       </CardContent>
@@ -94,7 +95,7 @@ function LineManager({ agentId, onUpdate }: { agentId: number; onUpdate: () => v
   
   const registerMutation = trpc.nodes.registerLine.useMutation({
     onSuccess: () => {
-      toast.success("Merchant Line Registered");
+      toast.success("Line registered");
       lines.refetch();
       onUpdate();
     }
@@ -102,7 +103,7 @@ function LineManager({ agentId, onUpdate }: { agentId: number; onUpdate: () => v
 
   const deleteMutation = trpc.nodes.deleteLine.useMutation({
     onSuccess: () => {
-      toast.success("Merchant Line Revoked");
+      toast.success("Line revoked");
       lines.refetch();
       onUpdate();
     }
@@ -111,57 +112,62 @@ function LineManager({ agentId, onUpdate }: { agentId: number; onUpdate: () => v
   const [newLine, setNewLine] = useState({ providerId: "", agentCode: "" });
 
   return (
-    <div className="mt-8 pt-8 border-t border-slate-100 dark:border-white/5 space-y-8 animate-in slide-in-from-top-4 duration-500">
+    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-slate-700 space-y-4">
        <div className="flex items-center justify-between">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic">Active merchant gateways</h4>
-          <div className="flex items-center gap-3">
+          <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Provider Lines</h4>
+          <div className="flex items-center gap-2">
              <select 
                value={newLine.providerId}
                onChange={e => setNewLine({...newLine, providerId: e.target.value})}
-               className="h-9 px-4 bg-slate-50 dark:bg-white/5 rounded-lg text-[9px] font-black uppercase outline-none focus:ring-1 focus:ring-primary transition-all"
+               className="h-8 px-3 bg-gray-50 dark:bg-slate-800 rounded-md text-xs font-medium border border-gray-200 dark:border-slate-700 outline-none focus:border-blue-500"
              >
-               <option value="">SELECT PROVIDER...</option>
+               <option value="">Select provider...</option>
                {providers.data?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
              </select>
              <Input 
-               placeholder="AGENT CODE..." 
+               placeholder="Agent code..." 
                value={newLine.agentCode}
                onChange={e => setNewLine({...newLine, agentCode: e.target.value})}
-               className="h-9 w-32 bg-slate-50 dark:bg-white/5 border-none text-[9px] font-black uppercase italic"
+               className="h-8 w-28 bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-xs font-mono"
              />
              <Button 
                onClick={() => registerMutation.mutate({ employeeId: agentId, providerId: parseInt(newLine.providerId), agentCode: newLine.agentCode })}
                disabled={!newLine.providerId || !newLine.agentCode || registerMutation.isPending}
-               className="h-9 px-4 bg-primary text-white rounded-lg text-[9px] font-black uppercase tracking-widest"
+               size="sm"
+               className="h-8 px-3 bg-blue-600 text-white rounded-md text-xs font-medium"
              >
-               Add Line
+               Add
              </Button>
           </div>
        </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
           {lines.data?.map((line: any) => (
-            <div key={line.id} className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5 flex items-center justify-between group/line">
-               <div>
-                  <p className="text-[9px] font-black text-primary uppercase tracking-widest">{providers.data?.find((p: any) => p.id === line.providerId)?.name}</p>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">{line.agentCode}</p>
+            <div key={line.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 flex items-center justify-between group">
+               <div className="flex items-center gap-2.5">
+                  <Smartphone className="h-3.5 w-3.5 text-gray-400" />
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">{providers.data?.find((p: any) => p.id === line.providerId)?.name}</p>
+                    <p className="text-xs text-gray-500 font-mono">{line.agentCode}</p>
+                  </div>
                </div>
                <Button 
                  onClick={() => {
-                   if(confirm("Permanently revoke this gateway?")) {
+                   if(confirm("Revoke this line?")) {
                       deleteMutation.mutate({ id: line.id });
                    }
                  }}
                  variant="ghost" 
-                 className="h-8 w-8 rounded-lg text-rose-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-line-hover:opacity-100 transition-all"
+                 size="icon"
+                 className="h-7 w-7 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                >
-                  <XCircle className="h-4 w-4" />
+                  <XCircle className="h-3.5 w-3.5" />
                </Button>
             </div>
           ))}
           {(!lines.data || lines.data.length === 0) && (
-            <div className="col-span-full py-6 text-center border border-dashed border-slate-100 rounded-2xl">
-               <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">No financial lines allocated</span>
+            <div className="col-span-full py-4 text-center border border-dashed border-gray-200 dark:border-slate-700 rounded-lg">
+               <span className="text-xs text-gray-400">No lines assigned</span>
             </div>
           )}
        </div>
@@ -175,7 +181,7 @@ export default function SupervisorTeam() {
   
   const terminateMutation = trpc.nodes.updateEmployee.useMutation({
     onSuccess: () => {
-      toast.success("Agent terminated and access revoked.");
+      toast.success("Agent terminated.");
       employees.refetch();
     },
     onError: (err) => toast.error(err.message),
@@ -183,77 +189,83 @@ export default function SupervisorTeam() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-16 pb-24">
-        <div className="flex flex-col md:items-center gap-8 border-b border-slate-100 dark:border-white/5 pb-10">
-           <div className="text-center md:text-left w-full">
-              <h1 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic font-outfit">
-                Team <span className="text-primary not-italic">Roster</span>
-              </h1>
-              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.4em] mt-3">Governance and managed personnel oversight</p>
-           </div>
-        </div>
+      <div className="space-y-8 pb-16">
+        <PageHeader
+          title="Team Management"
+          subtitle="Enroll agents and manage provider access."
+          category="Supervisor"
+        />
 
-        <div className="grid lg:grid-cols-2 gap-16 items-start">
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
            <AgentEnrollmentForm onEnroll={() => employees.refetch()} />
            
-           <div className="space-y-8">
-              <div className="flex items-center justify-between px-4">
-                 <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic font-outfit">Active Agents</h2>
-                 <Badge className="bg-primary/10 text-primary border-none text-[10px] font-black px-4 py-1.5 rounded-xl uppercase">Live: {employees.data?.filter(e => e.role === 'agent' && e.status === 'active').length || 0}</Badge>
+           <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Active Agents</h2>
+                 <Badge className="bg-blue-50 text-blue-700 border-none font-medium text-xs">
+                   {employees.data?.filter(e => e.role === 'agent' && e.status === 'active').length || 0} active
+                 </Badge>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                  {employees.data?.filter(e => e.role === 'agent' && e.status === 'active').map((agent: any) => (
-                   <div key={agent.id} className="group relative">
-                      <div className={`p-8 bg-white dark:bg-slate-900/40 border transition-all duration-500 rounded-[2.5rem] shadow-sm hover:shadow-2xl ${expandedAgent === agent.id ? 'border-primary/30 ring-4 ring-primary/5' : 'border-slate-100 dark:border-white/5'}`}>
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-6 cursor-pointer" onClick={() => setExpandedAgent(expandedAgent === agent.id ? null : agent.id)}>
-                               <div className={`h-16 w-16 rounded-[1.25rem] flex items-center justify-center border transition-all duration-500 ${expandedAgent === agent.id ? 'bg-primary border-primary text-white rotate-6' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400'}`}>
-                                  <span className="text-2xl font-black italic font-outfit uppercase">{agent.name[0]}</span>
-                               </div>
-                               <div>
-                                  <p className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight italic font-outfit">{agent.name}</p>
-                                  <div className="flex items-center gap-4 mt-2">
-                                     <Badge variant="outline" className="border-slate-200 dark:border-white/10 text-[8px] font-black uppercase tracking-widest text-slate-400 bg-transparent">ID: {agent.uniqueCode}</Badge>
-                                     <div className="flex items-center gap-1.5">
-                                        <Phone className="h-3 w-3 text-emerald-500" />
-                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{agent.phone || "No Phone"}</span>
-                                     </div>
-                                  </div>
-                               </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                               <Button
-                                 variant="outline"
-                                 onClick={() => {
-                                   if (confirm(`Authorize termination of ${agent.name}? This action is immediate and revokes all terminal access.`)) {
-                                      terminateMutation.mutate({ id: agent.id, status: 'inactive' });
-                                   }
-                                 }}
-                                 className="h-12 px-6 rounded-2xl border-rose-100 dark:border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white font-black text-[10px] uppercase tracking-widest transition-all"
-                               >
-                                 Terminate
-                               </Button>
-                               <Button
-                                 onClick={() => setExpandedAgent(expandedAgent === agent.id ? null : agent.id)}
-                                 className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${expandedAgent === agent.id ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400'}`}
-                               >
-                                  {expandedAgent === agent.id ? <ShieldX className="h-5 w-5" /> : <Settings className="h-5 w-5" />}
-                               </Button>
-                            </div>
-                         </div>
-                         
-                         {expandedAgent === agent.id && (
-                           <LineManager agentId={agent.id} onUpdate={() => employees.refetch()} />
-                         )}
-                      </div>
-                   </div>
+                   <Card
+                     key={agent.id}
+                     className={`border border-gray-200 dark:border-slate-700 shadow-sm transition-all ${expandedAgent === agent.id ? 'ring-2 ring-blue-300' : ''}`}
+                   >
+                     <CardContent className="p-5">
+                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setExpandedAgent(expandedAgent === agent.id ? null : agent.id)}>
+                             <div className={`h-10 w-10 rounded-lg flex items-center justify-center font-semibold text-sm transition-colors ${expandedAgent === agent.id ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'}`}>
+                                {agent.name[0]}
+                             </div>
+                             <div>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{agent.name}</p>
+                                <div className="flex items-center gap-3 mt-0.5">
+                                   <Badge variant="outline" className="text-[10px] font-medium text-gray-400 border-gray-200">ID: {agent.uniqueCode}</Badge>
+                                   {agent.phone && (
+                                     <span className="text-xs text-gray-400 flex items-center gap-1">
+                                       <Phone className="h-3 w-3 text-emerald-500" /> {agent.phone}
+                                     </span>
+                                   )}
+                                </div>
+                             </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                             <Button
+                               variant="outline"
+                               onClick={() => {
+                                 if (confirm(`Terminate ${agent.name}? This revokes all access.`)) {
+                                    terminateMutation.mutate({ id: agent.id, status: 'inactive' });
+                                 }
+                               }}
+                               size="sm"
+                               className="h-8 px-3 rounded-md border-red-200 text-red-600 hover:bg-red-50 font-medium text-xs"
+                             >
+                               Terminate
+                             </Button>
+                             <Button
+                               onClick={() => setExpandedAgent(expandedAgent === agent.id ? null : agent.id)}
+                               variant="ghost"
+                               size="icon"
+                               className="h-8 w-8 rounded-md"
+                             >
+                                {expandedAgent === agent.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                             </Button>
+                          </div>
+                       </div>
+                       
+                       {expandedAgent === agent.id && (
+                         <LineManager agentId={agent.id} onUpdate={() => employees.refetch()} />
+                       )}
+                     </CardContent>
+                   </Card>
                  ))}
                  {(!employees.data || employees.data.filter(e => e.role === 'agent' && e.status === 'active').length === 0) && (
-                   <div className="p-20 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem] text-center bg-slate-50/30">
-                      <ShieldX className="h-12 w-12 text-slate-200 mx-auto mb-6" />
-                      <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest leading-loose">No personnel currently assigned<br/>to your management registry</p>
+                   <div className="p-12 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl text-center">
+                      <Users2 className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                      <p className="text-sm text-gray-400">No agents assigned to your team</p>
                    </div>
                  )}
               </div>

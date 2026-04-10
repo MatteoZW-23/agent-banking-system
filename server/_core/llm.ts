@@ -102,64 +102,51 @@ export type InvokeResult = {
   };
 };
 
-export type JsonSchema = {
+export type OutputSchema = {
   name: string;
+  description?: string;
   schema: Record<string, unknown>;
   strict?: boolean;
 };
 
-export type OutputSchema = JsonSchema;
+export type JsonSchema = {
+  name: string;
+  description?: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
+};
 
 export type ResponseFormat =
   | { type: "text" }
   | { type: "json_object" }
   | { type: "json_schema"; json_schema: JsonSchema };
 
-const ensureArray = (
-  value: MessageContent | MessageContent[]
-): MessageContent[] => (Array.isArray(value) ? value : [value]);
+const ensureArray = <T>(value: T | T[]): T[] =>
+  Array.isArray(value) ? value : [value];
 
 const normalizeContentPart = (
-  part: MessageContent
+  content: MessageContent
 ): TextContent | ImageContent | FileContent => {
-  if (typeof part === "string") {
-    return { type: "text", text: part };
+  if (typeof content === "string") {
+    return { type: "text", text: content };
   }
-
-  if (part.type === "text") {
-    return part;
-  }
-
-  if (part.type === "image_url") {
-    return part;
-  }
-
-  if (part.type === "file_url") {
-    return part;
-  }
-
-  throw new Error("Unsupported message content part");
+  return content;
 };
 
 const normalizeMessage = (message: Message) => {
   const { role, name, tool_call_id } = message;
 
-  if (role === "tool" || role === "function") {
-    const content = ensureArray(message.content)
-      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
-      .join("\n");
-
+  if (typeof message.content === "string") {
     return {
       role,
       name,
       tool_call_id,
-      content,
+      content: message.content,
     };
   }
 
   const contentParts = ensureArray(message.content).map(normalizeContentPart);
 
-  // If there's only text content, collapse to a single string for compatibility
   if (contentParts.length === 1 && contentParts[0].type === "text") {
     return {
       role,
@@ -215,13 +202,15 @@ const normalizeToolChoice = (
 };
 
 const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+  ENV.openRouterApiKey && ENV.openRouterApiKey.trim().length > 0
+    ? "https://openrouter.ai/api/v1/chat/completions"
+    : (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+        ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+        : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!ENV.openRouterApiKey && !ENV.forgeApiKey) {
+    throw new Error("No AI API KEY (OPENROUTER_API_KEY or FORGE_API_KEY) configured");
   }
 };
 
@@ -282,12 +271,18 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
     responseFormat,
     response_format,
+    maxTokens,
+    max_tokens,
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: ENV.aiModel,
     messages: messages.map(normalizeMessage),
   };
+
+  if (maxTokens || max_tokens) {
+    payload.max_tokens = maxTokens || max_tokens;
+  }
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -301,36 +296,33 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768;
-  payload.thinking = {
-    budget_tokens: 128,
-  };
-
-  const normalizedResponseFormat = normalizeResponseFormat({
+  const format = normalizeResponseFormat({
     responseFormat,
     response_format,
     outputSchema,
     output_schema,
   });
-
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
+  if (format) {
+    payload.response_format = format;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const apiUrl = resolveApiUrl();
+  const apiKey = ENV.openRouterApiKey || ENV.forgeApiKey;
+
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://agent-banking-system.com",
+      "X-Title": "Agent Banking System",
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-    );
+    throw new Error(`AI request failed (${response.status}): ${errorText}`);
   }
 
   return (await response.json()) as InvokeResult;

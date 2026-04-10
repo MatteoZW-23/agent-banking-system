@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  MessageSquareShare,
+  MessageSquare,
   X,
   Send,
   Loader2,
-  ShieldAlert,
+  HelpCircle,
   ArrowRight,
-  Sparkles,
   Search,
   History as HistoryIcon,
 } from "lucide-react";
@@ -17,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Streamdown } from "streamdown";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export interface Message {
   role: "system" | "user" | "assistant";
@@ -24,13 +25,13 @@ export interface Message {
 }
 
 export function FloatingAIAssistant() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content:
-        "Hello! I'm your Agent Banking AI Assistant. I can help you analyze transactions, monitor float levels, and detect suspicious patterns. How can I assist you today?",
+      content: `Sovereign Finance Operations Support ready. I can analyze transactions, track float levels, and summarize regional performance. How can I assist with your current session?`,
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,8 +44,8 @@ export function FloatingAIAssistant() {
       setIsLoading(false);
     },
     onError: error => {
-      console.error("AI Error:", error);
-      toast.error("AI Assistant unavailable", {
+      console.error("Assistant Error:", error);
+      toast.error("Assistant unavailable", {
         description: error.message,
       });
       setIsLoading(false);
@@ -53,7 +54,15 @@ export function FloatingAIAssistant() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLDivElement;
+      if (viewport) {
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   }, [messages, isLoading]);
 
@@ -77,39 +86,32 @@ export function FloatingAIAssistant() {
   };
 
   const suggestedPrompts = [
-    "Check for recent fraud attempts",
-    "Analyze float liquidity risks",
-    "Show flagged transactions",
-    "Summarize yesterday's report",
+    "Verify float levels",
+    "View active alerts",
+    "Recent transaction summary",
+    "Check system status",
   ];
 
   return (
-    <div className="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-4 print:hidden">
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3 print:hidden">
       {/* Chat Window */}
       {isOpen && (
-        <Card className="w-[420px] h-[600px] flex flex-col shadow-2xl border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-5 fade-in duration-300 rounded-[2.5rem] overflow-hidden bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl">
+        <Card className="w-[380px] h-[580px] flex flex-col shadow-2xl border-gray-200 dark:border-slate-800 animate-in slide-in-from-bottom-5 fade-in duration-300 rounded-2xl overflow-hidden bg-white dark:bg-slate-950">
           {/* Header */}
-          <div className="p-6 premium-gradient text-white flex items-center justify-between shadow-lg relative">
-            <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-              <Sparkles className="h-full w-full opacity-10 animate-pulse" />
-            </div>
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-white-sm">
-                <ShieldAlert className="h-5 w-5 text-white" />
+          <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
+                <HelpCircle className="h-5 w-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-black uppercase tracking-widest leading-none">
-                  AI Agent
-                </span>
-                <span className="text-[10px] text-white/70 font-semibold uppercase tracking-tighter mt-1">
-                  Fraud & Risk Watcher Active
-                </span>
+                <span className="text-sm font-bold tracking-tight">Sovereign Assistant</span>
+                <span className="text-[10px] text-white/70 font-medium uppercase tracking-wide">Security Operations Intel</span>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/20 rounded-full h-8 w-8 transition-all relative z-10"
+              className="text-white hover:bg-white/10 rounded-lg h-8 w-8 transition-colors"
               onClick={() => setIsOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -117,13 +119,13 @@ export function FloatingAIAssistant() {
           </div>
 
           {/* Messages Area */}
-          <ScrollArea ref={scrollRef} className="flex-1 p-6 space-y-6">
-            <div className="space-y-6">
+          <ScrollArea ref={scrollRef} className="flex-1 p-5">
+            <div className="space-y-4">
               {messages.map((msg, i) => (
                 <div
                   key={i}
                   className={cn(
-                    "flex flex-col max-w-[85%] space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    "flex flex-col max-w-[85%] space-y-1.5 animate-in fade-in slide-in-from-bottom-1 duration-300",
                     msg.role === "user"
                       ? "ml-auto items-end"
                       : "mr-auto items-start"
@@ -131,39 +133,41 @@ export function FloatingAIAssistant() {
                 >
                   <div
                     className={cn(
-                      "p-4 rounded-3xl text-sm font-medium leading-relaxed shadow-sm",
+                      "p-3.5 rounded-2xl text-sm font-medium leading-relaxed",
                       msg.role === "user"
-                        ? "bg-primary text-white rounded-tr-none shadow-primary-sm"
-                        : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/50 dark:border-slate-800"
+                        ? "bg-blue-600 text-white rounded-tr-none"
+                        : "bg-gray-100 dark:bg-slate-900 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-slate-800"
                     )}
                   >
-                    {msg.content}
+                    {msg.role === "assistant" ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <Streamdown>{msg.content}</Streamdown>
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </div>
               ))}
               {isLoading && (
-                <div className="flex flex-col max-w-[85%] items-start animate-fade-in">
-                  <div className="p-4 rounded-3xl bg-slate-100 dark:bg-slate-900 text-slate-400 rounded-tl-none border border-slate-200/50 dark:border-slate-800 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-xs font-bold uppercase tracking-widest">
-                      Analyzing patterns...
-                    </span>
+                <div className="flex flex-col max-w-[85%] items-start animate-in fade-in">
+                  <div className="p-3 bg-gray-50 dark:bg-slate-900 text-gray-400 rounded-xl rounded-tl-none border border-gray-100 dark:border-slate-800 flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Processing...</span>
                   </div>
                 </div>
               )}
             </div>
           </ScrollArea>
 
-          {/* Suggested Prompts (only if fewer than 3 messages) */}
-          {messages.length < 4 && !isLoading && (
-            <div className="px-6 pb-4 flex flex-wrap gap-2">
+          {/* Suggested Prompts */}
+          {messages.length < 3 && !isLoading && (
+            <div className="px-5 pb-3 flex flex-wrap gap-2">
               {suggestedPrompts.map(prompt => (
                 <button
                   key={prompt}
-                  onClick={() => {
-                    setInput(prompt);
-                  }}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-[10px] font-bold text-slate-500 uppercase tracking-tight hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all active:scale-95"
+                  onClick={() => setInput(prompt)}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-colors"
                 >
                   {prompt}
                 </button>
@@ -172,55 +176,50 @@ export function FloatingAIAssistant() {
           )}
 
           {/* Input Area */}
-          <div className="p-6 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
-            <div className="relative group">
+          <div className="p-5 bg-gray-50/50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-800">
+            <div className="relative">
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Ask about fraud, float, or reconciliation..."
-                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none min-h-[60px] max-h-[120px] transition-all shadow-inner font-medium text-slate-700 dark:text-slate-200"
+                placeholder="Ask a question..."
+                className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 resize-none min-h-[54px] max-h-[120px] transition-all font-medium text-gray-700 dark:text-gray-200"
               />
               <Button
                 size="icon"
                 className={cn(
-                  "absolute bottom-3 right-3 h-8 w-8 rounded-xl premium-gradient text-white shadow-lg transition-all active:scale-90",
-                  !input.trim() && "opacity-50 grayscale pointer-events-none"
+                  "absolute bottom-2 right-2 h-7 w-7 rounded-lg bg-blue-600 text-white shadow-sm transition-all",
+                  !input.trim() && "opacity-50 pointer-events-none"
                 )}
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
               >
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <p className="text-[10px] text-slate-400 mt-3 text-center font-bold tracking-tight uppercase opacity-50">
-              AgentTrack Intelligence &bull; Ethical Shield V2.0
+            <p className="text-[9px] text-gray-400 mt-3 text-center font-bold tracking-tight uppercase">
+              Sovereign Finance Network Support
             </p>
           </div>
         </Card>
       )}
 
-      {/* Floating Toggle Button */}
+      {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "h-16 w-16 rounded-[2rem] flex items-center justify-center text-white shadow-2xl transition-all duration-500 active:scale-95 hover:scale-110",
+          "h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95",
           isOpen
-            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 rotate-90"
-            : "premium-gradient"
+            ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+            : "bg-blue-600"
         )}
-        style={{
-          boxShadow: isOpen
-            ? "0 20px 40px rgba(0,0,0,0.3)"
-            : "0 10px 30px rgba(var(--primary-rgb),0.4)",
-        }}
       >
         {isOpen ? (
-          <X className="h-7 w-7" />
+          <X className="h-6 w-6" />
         ) : (
           <div className="relative">
-            <MessageSquareShare className="h-7 w-7 animate-pulse" />
-            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-rose-500 border-2 border-white shadow-rose-sm" />
+            <MessageSquare className="h-6 w-6" />
+            <div className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white shadow-sm" />
           </div>
         )}
       </button>

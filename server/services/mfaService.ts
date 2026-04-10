@@ -117,7 +117,7 @@ export const mfaService = {
   /**
    * Generates an otpauth:// URI for QR codes
    */
-  getOtpauthUri(secret: string, email: string, issuer = "AgentTrack"): string {
+  getOtpauthUri(secret: string, email: string, issuer = "Sovereign Finance"): string {
     return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30`;
   }
 };

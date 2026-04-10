@@ -1,82 +1,173 @@
 import {
-  int,
-  mysqlEnum,
-  mysqlTable,
+  integer,
+  pgEnum,
+  pgTable,
   text,
   timestamp,
   varchar,
-  decimal,
+  numeric,
   boolean,
-  json,
+  jsonb,
   date,
   index,
   unique,
-} from "drizzle-orm/mysql-core";
+  serial,
+} from "drizzle-orm/pg-core";
+
+/**
+ * Enums
+ */
+export const roleEnum = pgEnum("role", ["admin", "supervisor", "manager", "agent"]);
+export const branchStatusEnum = pgEnum("branch_status", ["active", "closed", "maintenance"]);
+export const employeeStatusEnum = pgEnum("employee_status", ["active", "inactive", "suspended"]);
+export const employeeRoleEnum = pgEnum("employee_role", ["agent", "supervisor", "manager"]);
+export const payoutMethodEnum = pgEnum("payout_method", ["EcoCash", "InnBucks", "OneMoney", "Bank", "Cash"]);
+export const providerCategoryEnum = pgEnum("provider_category", ["mobile_money", "bank", "fintech", "aggregator"]);
+export const authTypeEnum = pgEnum("auth_type", ["oauth2", "apikey", "basic", "mtls", "none"]);
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "cash_in",
+  "cash_out",
+  "send_money",
+  "receive_money",
+  "bill_payment",
+  "airtime",
+  "data_bundle",
+  "ticket_purchase",
+  "bank_transfer",
+  "salary_disbursement",
+  "float_purchase",
+  "float_redemption",
+]);
+export const transactionStatusEnum = pgEnum("transaction_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "reversed",
+  "disputed",
+]);
+export const reconciliationStatusEnum = pgEnum("reconciliation_status", [
+  "unreconciled",
+  "matched",
+  "mismatch",
+  "investigating",
+]);
+export const floatRequestStatusEnum = pgEnum("float_request_status", [
+  "pending",
+  "approved",
+  "declined",
+  "transferred",
+]);
+export const payoutFrequencyEnum = pgEnum("payout_frequency", [
+  "instant",
+  "weekly",
+  "bi_weekly",
+  "monthly",
+]);
+export const settlementStatusEnum = pgEnum("settlement_status", [
+  "pending",
+  "completed",
+  "failed",
+  "investigating",
+]);
+export const ledgerTypeEnum = pgEnum("ledger_type", ["earning", "disbursement", "shortage_penalty"]);
+export const ledgerStatusEnum = pgEnum("ledger_status", ["pending", "cleared", "failed"]);
+export const flagTypeEnum = pgEnum("flag_type", [
+  "suspicious_pattern",
+  "unusual_amount",
+  "timing_anomaly",
+  "duplicate_risk",
+  "fraud_risk",
+  "kyc_missing",
+  "other",
+]);
+export const flagStatusEnum = pgEnum("flag_status", [
+  "flagged",
+  "reviewed",
+  "resolved",
+  "false_positive",
+]);
+export const alertTypeEnum = pgEnum("alert_type", [
+  "discrepancy",
+  "low_float",
+  "failed_reconciliation",
+  "suspicious_transaction",
+  "high_commission",
+  "other",
+]);
+export const thresholdUnitEnum = pgEnum("threshold_unit", ["amount", "percentage", "count"]);
+export const alertStatusEnum = pgEnum("alert_status", [
+  "triggered",
+  "acknowledged",
+  "resolved",
+  "dismissed",
+]);
+export const severityEnum = pgEnum("severity", ["low", "medium", "high", "critical"]);
+export const checkInStatusEnum = pgEnum("check_in_status", ["pending_adjustment", "verified", "discrepancy"]);
+export const csvImportStatusEnum = pgEnum("csv_import_status", ["pending", "processing", "completed", "failed"]);
+export const salaryStatusEnum = pgEnum("salary_status", ["pending", "processing", "disbursed", "failed"]);
 
 /**
  * Core user table backing auth flow.
  */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  password: text("password"), // Added for password-based auth
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["admin", "supervisor", "manager", "agent"]).default("agent").notNull(),
+  role: roleEnum("role").default("agent").notNull(),
   mfaEnabled: boolean("mfaEnabled").default(false).notNull(),
   mfaSecret: text("mfaSecret"),
-  mfaBackupCodes: json("mfaBackupCodes"),
+  mfaBackupCodes: jsonb("mfaBackupCodes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  agreedToTerms: boolean("agreedToTerms").default(false).notNull(),
+  termsAgreedAt: timestamp("termsAgreedAt"),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
- * Branches table - tracks physical locations/hubs of operations
+ * Branches table
  */
-export const branches = mysqlTable("branches", {
-  id: int("id").autoincrement().primaryKey(),
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
   region: varchar("region", { length: 100 }),
   managerName: varchar("manager_name", { length: 100 }),
   contactPhone: varchar("contact_phone", { length: 20 }),
-  status: mysqlEnum("status", ["active", "closed", "maintenance"]).default(
-    "active"
-  ),
+  status: branchStatusEnum("status").default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Branch = typeof branches.$inferSelect;
 export type InsertBranch = typeof branches.$inferInsert;
 
 /**
- * Employees table - tracks agents and their unique identifiers across platforms
+ * Employees table
  */
-export const employees = mysqlTable(
+export const employees = pgTable(
   "employees",
   {
-    id: int("id").autoincrement().primaryKey(),
+    id: serial("id").primaryKey(),
     uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(),
-    branchId: int("branch_id").references(() => branches.id),
+    branchId: integer("branch_id").references(() => branches.id),
     name: varchar("name", { length: 100 }).notNull(),
     email: varchar("email", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
-    location: varchar("location", { length: 255 }), // Physical worksite/address
-    status: mysqlEnum("status", ["active", "inactive", "suspended"]).default(
-      "active"
-    ),
-    role: mysqlEnum("role", ["agent", "supervisor", "manager"]).default(
-      "agent"
-    ),
-    preferredPayoutMethod: mysqlEnum("payout_method", ["EcoCash", "InnBucks", "OneMoney", "Bank", "Cash"]).default("EcoCash"),
+    location: varchar("location", { length: 255 }),
+    status: employeeStatusEnum("status").default("active"),
+    role: employeeRoleEnum("role").default("agent"),
+    preferredPayoutMethod: payoutMethodEnum("payout_method").default("EcoCash"),
     payoutAccountNumber: varchar("payout_account", { length: 100 }),
-    salaryPercentage: decimal("salary_percentage", { precision: 5, scale: 2 }).default("15.00"),
+    salaryPercentage: numeric("salary_percentage", { precision: 5, scale: 2 }).default("15.00"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   table => ({
     uniqueCodeIdx: index("idx_employees_unique_code").on(table.uniqueCode),
@@ -88,29 +179,18 @@ export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = typeof employees.$inferInsert;
 
 /**
- * Providers table - registry of all payment providers (mobile money, banks, fintechs)
+ * Providers table
  */
-export const providers = mysqlTable(
+export const providers = pgTable(
   "providers",
   {
-    id: int("id").autoincrement().primaryKey(),
+    id: serial("id").primaryKey(),
     name: varchar("name", { length: 100 }).notNull().unique(),
-    category: mysqlEnum("category", [
-      "mobile_money",
-      "bank",
-      "fintech",
-      "aggregator",
-    ]).notNull(),
+    category: providerCategoryEnum("category").notNull(),
     agentServiceName: varchar("agent_service_name", { length: 100 }),
     apiEndpoint: varchar("api_endpoint", { length: 255 }),
-    authType: mysqlEnum("auth_type", [
-      "oauth2",
-      "apikey",
-      "basic",
-      "mtls",
-      "none",
-    ]).notNull(),
-    authConfig: json("auth_config"),
+    authType: authTypeEnum("auth_type").notNull(),
+    authConfig: jsonb("auth_config"),
     webhookUrl: varchar("webhook_url", { length: 255 }),
     settlementAccount: varchar("settlement_account", { length: 50 }),
     isActive: boolean("is_active").default(true),
@@ -127,20 +207,20 @@ export type Provider = typeof providers.$inferSelect;
 export type InsertProvider = typeof providers.$inferInsert;
 
 /**
- * Agent registrations - credentials and configuration for each agent on each provider
+ * Agent registrations
  */
-export const agentRegistrations = mysqlTable(
+export const agentRegistrations = pgTable(
   "agent_registrations",
   {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").references(() => employees.id),
-    providerId: int("provider_id").notNull(),
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id").references(() => employees.id),
+    providerId: integer("provider_id").notNull(),
     agentCode: varchar("agent_code", { length: 50 }).notNull(),
     merchantId: varchar("merchant_id", { length: 50 }),
     apiKeyEncrypted: text("api_key_encrypted"),
     apiSecretEncrypted: text("api_secret_encrypted"),
     floatAccount: varchar("float_account", { length: 50 }),
-    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }),
+    commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }),
     isPrimary: boolean("is_primary").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -158,88 +238,39 @@ export type AgentRegistration = typeof agentRegistrations.$inferSelect;
 export type InsertAgentRegistration = typeof agentRegistrations.$inferInsert;
 
 /**
- * Transactions table - unified transaction model across all providers
+ * Transactions table
  */
-export const transactions = mysqlTable(
+export const transactions = pgTable(
   "transactions",
   {
-    id: int("id").autoincrement().primaryKey(),
-    providerId: int("provider_id").notNull(),
-    agentRegistrationId: int("agent_registration_id"),
+    id: serial("id").primaryKey(),
+    providerId: integer("provider_id").notNull(),
+    agentRegistrationId: integer("agent_registration_id"),
     employeeCode: varchar("employee_code", { length: 20 }),
-
-    // Transaction identifiers
     providerReference: varchar("provider_reference", { length: 200 }).notNull(),
-    internalReference: varchar("internal_reference", { length: 100 })
-      .notNull()
-      .unique(),
-
-    // Transaction details
-    type: mysqlEnum("type", [
-      "cash_in",
-      "cash_out",
-      "send_money",
-      "receive_money",
-      "bill_payment",
-      "airtime",
-      "data_bundle",
-      "ticket_purchase",
-      "bank_transfer",
-      "salary_disbursement",
-      "float_purchase",
-      "float_redemption",
-    ]).notNull(),
-
-    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-    fee: decimal("fee", { precision: 15, scale: 2 }).default("0"),
-    tax: decimal("tax", { precision: 15, scale: 2 }).default("0"),
-    netAmount: decimal("net_amount", { precision: 15, scale: 2 }),
-
-    // Customer info (masked for privacy)
+    internalReference: varchar("internal_reference", { length: 100 }).notNull().unique(),
+    type: transactionTypeEnum("type").notNull(),
+    amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
+    fee: numeric("fee", { precision: 15, scale: 2 }).default("0"),
+    tax: numeric("tax", { precision: 15, scale: 2 }).default("0"),
+    netAmount: numeric("net_amount", { precision: 15, scale: 2 }),
     customerPhone: varchar("customer_phone", { length: 15 }),
     customerNationalId: varchar("customer_national_id", { length: 20 }),
     customerName: varchar("customer_name", { length: 100 }),
-
-    // Status tracking
-    status: mysqlEnum("status", [
-      "pending",
-      "processing",
-      "completed",
-      "failed",
-      "reversed",
-      "disputed",
-    ]).default("pending"),
+    status: transactionStatusEnum("status").default("pending"),
     failureReason: text("failure_reason"),
-
-    // Reconciliation flags
-    reconciliationStatus: mysqlEnum("reconciliation_status", [
-      "unreconciled",
-      "matched",
-      "mismatch",
-      "investigating",
-    ]).default("unreconciled"),
-
-    // Timestamps
+    reconciliationStatus: reconciliationStatusEnum("reconciliation_status").default("unreconciled"),
     transactionTime: timestamp("transaction_time").notNull(),
     providerProcessedAt: timestamp("provider_processed_at"),
     syncedAt: timestamp("synced_at").defaultNow(),
-
-    // Metadata
-    metadata: json("metadata"),
+    metadata: jsonb("metadata"),
   },
   table => ({
     providerIdIdx: index("idx_transactions_provider").on(table.providerId),
     employeeCodeIdx: index("idx_transactions_employee").on(table.employeeCode),
-    transactionTimeIdx: index("idx_transactions_time").on(
-      table.transactionTime
-    ),
-    reconStatusIdx: index("idx_transactions_recon_status").on(
-      table.reconciliationStatus
-    ),
-    uniqueProviderRef: unique("unique_provider_ref").on(
-      table.providerId,
-      table.providerReference
-    ),
+    transactionTimeIdx: index("idx_transactions_time").on(table.transactionTime),
+    reconStatusIdx: index("idx_transactions_recon_status").on(table.reconciliationStatus),
+    uniqueProviderRef: unique("unique_provider_ref").on(table.providerId, table.providerReference),
   })
 );
 
@@ -247,31 +278,22 @@ export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
 
 /**
- * Provider floats - tracks float balances per provider per agent
+ * Provider floats
  */
-export const providerFloats = mysqlTable(
+export const providerFloats = pgTable(
   "provider_floats",
   {
-    id: int("id").autoincrement().primaryKey(),
-    providerId: int("provider_id").notNull(),
-    agentRegistrationId: int("agent_registration_id"),
-    openingBalance: decimal("opening_balance", {
-      precision: 15,
-      scale: 2,
-    }).notNull(),
-    currentBalance: decimal("current_balance", {
-      precision: 15,
-      scale: 2,
-    }).notNull(),
-    minimumThreshold: decimal("minimum_threshold", {
-      precision: 15,
-      scale: 2,
-    }).default("0"),
-    maximumThreshold: decimal("maximum_threshold", { precision: 15, scale: 2 }),
+    id: serial("id").primaryKey(),
+    providerId: integer("provider_id").notNull(),
+    agentRegistrationId: integer("agent_registration_id"),
+    openingBalance: numeric("opening_balance", { precision: 15, scale: 2 }).notNull(),
+    currentBalance: numeric("current_balance", { precision: 15, scale: 2 }).notNull(),
+    minimumThreshold: numeric("minimum_threshold", { precision: 15, scale: 2 }).default("0"),
+    maximumThreshold: numeric("maximum_threshold", { precision: 15, scale: 2 }),
     lastReconciledAt: timestamp("last_reconciled_at"),
-    reconciledBy: int("reconciled_by"),
+    reconciledBy: integer("reconciled_by"),
     notes: text("notes"),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
   },
   table => ({
     providerIdIdx: index("idx_floats_provider").on(table.providerId),
@@ -283,27 +305,22 @@ export type ProviderFloat = typeof providerFloats.$inferSelect;
 export type InsertProviderFloat = typeof providerFloats.$inferInsert;
 
 /**
- * Float Requests - tracks worker requests for more floating capital
+ * Float Requests
  */
-export const floatRequests = mysqlTable(
+export const floatRequests = pgTable(
   "float_requests",
   {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").notNull(),
-    providerId: int("provider_id").notNull(),
-    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-    status: mysqlEnum("status", [
-      "pending",
-      "approved",
-      "declined",
-      "transferred",
-    ]).default("pending"),
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id").notNull(),
+    providerId: integer("provider_id").notNull(),
+    amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
+    status: floatRequestStatusEnum("status").default("pending"),
     requestTime: timestamp("request_time").defaultNow(),
     processedTime: timestamp("processed_time"),
-    processedBy: int("processed_by"),
+    processedBy: integer("processed_by"),
     workerNotes: text("worker_notes"),
     adminNotes: text("admin_notes"),
-    transactionReference: varchar("transaction_reference", { length: 255 }), // Bank/Momo transfer Ref
+    transactionReference: varchar("transaction_reference", { length: 255 }),
   },
   table => ({
     employeeIdIdx: index("idx_float_req_employee").on(table.employeeId),
@@ -316,78 +333,51 @@ export type FloatRequest = typeof floatRequests.$inferSelect;
 export type InsertFloatRequest = typeof floatRequests.$inferInsert;
 
 /**
- * Commission structures - flexible commission rules per provider and transaction type
+ * Commission structures
  */
-export const commissionStructures = mysqlTable(
+export const commissionStructures = pgTable(
   "commission_structures",
   {
-    id: int("id").autoincrement().primaryKey(),
-    providerId: int("provider_id").notNull(),
+    id: serial("id").primaryKey(),
+    providerId: integer("provider_id").notNull(),
     transactionType: varchar("transaction_type", { length: 30 }),
-    minAmount: decimal("min_amount", { precision: 15, scale: 2 }).default("0"),
-    maxAmount: decimal("max_amount", { precision: 15, scale: 2 }).default(
-      "999999999"
-    ),
-    commissionPercentage: decimal("commission_percentage", {
-      precision: 5,
-      scale: 2,
-    }),
-    commissionFixed: decimal("commission_fixed", {
-      precision: 15,
-      scale: 2,
-    }).default("0"),
-    payoutFrequency: mysqlEnum("payout_frequency", [
-      "instant",
-      "weekly",
-      "bi_weekly",
-      "monthly",
-    ]).default("instant"),
+    minAmount: numeric("min_amount", { precision: 15, scale: 2 }).default("0"),
+    maxAmount: numeric("max_amount", { precision: 15, scale: 2 }).default("999999999"),
+    commissionPercentage: numeric("commission_percentage", { precision: 5, scale: 2 }),
+    commissionFixed: numeric("commission_fixed", { precision: 15, scale: 2 }).default("0"),
+    payoutFrequency: payoutFrequencyEnum("payout_frequency").default("instant"),
     effectiveFrom: date("effective_from").notNull(),
     effectiveTo: date("effective_to"),
     isActive: boolean("is_active").default(true),
   },
   table => ({
     providerIdIdx: index("idx_commission_provider").on(table.providerId),
-    effectiveFromIdx: index("idx_commission_effective_from").on(
-      table.effectiveFrom
-    ),
+    effectiveFromIdx: index("idx_commission_effective_from").on(table.effectiveFrom),
   })
 );
 
 export type CommissionStructure = typeof commissionStructures.$inferSelect;
-export type InsertCommissionStructure =
-  typeof commissionStructures.$inferInsert;
+export type InsertCommissionStructure = typeof commissionStructures.$inferInsert;
 
 /**
- * Daily settlements - tracks daily reconciliation per provider
+ * Daily settlements
  */
-export const dailySettlements = mysqlTable(
+export const dailySettlements = pgTable(
   "daily_settlements",
   {
-    id: int("id").autoincrement().primaryKey(),
-    providerId: int("provider_id").notNull(),
+    id: serial("id").primaryKey(),
+    providerId: integer("provider_id").notNull(),
     settlementDate: date("settlement_date").notNull(),
-    expectedTotal: decimal("expected_total", {
-      precision: 15,
-      scale: 2,
-    }).notNull(),
-    actualTotal: decimal("actual_total", { precision: 15, scale: 2 }),
-    discrepancy: decimal("discrepancy", { precision: 15, scale: 2 }),
+    expectedTotal: numeric("expected_total", { precision: 15, scale: 2 }).notNull(),
+    actualTotal: numeric("actual_total", { precision: 15, scale: 2 }),
+    discrepancy: numeric("discrepancy", { precision: 15, scale: 2 }),
     bankReference: varchar("bank_reference", { length: 100 }),
     settledAt: timestamp("settled_at"),
-    status: mysqlEnum("status", [
-      "pending",
-      "completed",
-      "failed",
-      "investigating",
-    ]).default("pending"),
+    status: settlementStatusEnum("status").default("pending"),
     notes: text("notes"),
   },
   table => ({
-    providerDateIdx: unique("unique_provider_settlement_date").on(
-      table.providerId,
-      table.settlementDate
-    ),
+    providerDateIdx: unique("unique_provider_settlement_date").on(table.providerId, table.settlementDate),
     providerIdIdx: index("idx_settlement_provider").on(table.providerId),
     settlementDateIdx: index("idx_settlement_date").on(table.settlementDate),
   })
@@ -397,20 +387,18 @@ export type DailySettlement = typeof dailySettlements.$inferSelect;
 export type InsertDailySettlement = typeof dailySettlements.$inferInsert;
 
 /**
- * Commission ledger - tracks earned vs disbursed commissions per employee
+ * Commission ledger
  */
-export const commissionLedger = mysqlTable(
+export const commissionLedger = pgTable(
   "commission_ledger",
   {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").notNull(),
-    providerId: int("provider_id").notNull(),
-    transactionId: int("transaction_id"), // Null for bulk payouts
-    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-    type: mysqlEnum("type", ["earning", "disbursement", "shortage_penalty"]).notNull(),
-    status: mysqlEnum("status", ["pending", "cleared", "failed"]).default(
-      "pending"
-    ),
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id").notNull(),
+    providerId: integer("provider_id").notNull(),
+    transactionId: integer("transaction_id"),
+    amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
+    type: ledgerTypeEnum("type").notNull(),
+    status: ledgerStatusEnum("status").default("pending"),
     earnedAt: timestamp("earned_at").defaultNow(),
     payoutDate: date("payout_date"),
     payoutReference: varchar("payout_reference", { length: 255 }),
@@ -426,32 +414,19 @@ export type CommissionLedger = typeof commissionLedger.$inferSelect;
 export type InsertCommissionLedger = typeof commissionLedger.$inferInsert;
 
 /**
- * Transaction flags - LLM-flagged suspicious transactions
+ * Transaction flags
  */
-export const transactionFlags = mysqlTable(
+export const transactionFlags = pgTable(
   "transaction_flags",
   {
-    id: int("id").autoincrement().primaryKey(),
-    transactionId: int("transaction_id").notNull(),
-    flagType: mysqlEnum("flag_type", [
-      "suspicious_pattern",
-      "unusual_amount",
-      "timing_anomaly",
-      "duplicate_risk",
-      "fraud_risk",
-      "kyc_missing",
-      "other",
-    ]).notNull(),
-    riskScore: decimal("risk_score", { precision: 3, scale: 2 }),
+    id: serial("id").primaryKey(),
+    transactionId: integer("transaction_id").notNull(),
+    flagType: flagTypeEnum("flag_type").notNull(),
+    riskScore: numeric("risk_score", { precision: 3, scale: 2 }),
     reason: text("reason").notNull(),
-    llmAnalysis: json("llm_analysis"),
-    status: mysqlEnum("status", [
-      "flagged",
-      "reviewed",
-      "resolved",
-      "false_positive",
-    ]).default("flagged"),
-    reviewedBy: int("reviewed_by"),
+    llmAnalysis: jsonb("llm_analysis"),
+    status: flagStatusEnum("status").default("flagged"),
+    reviewedBy: integer("reviewed_by"),
     reviewedAt: timestamp("reviewed_at"),
     createdAt: timestamp("created_at").defaultNow(),
   },
@@ -466,31 +441,20 @@ export type TransactionFlag = typeof transactionFlags.$inferSelect;
 export type InsertTransactionFlag = typeof transactionFlags.$inferInsert;
 
 /**
- * Alert configurations - threshold settings for alerts
+ * Alert configurations
  */
-export const alertConfigurations = mysqlTable(
+export const alertConfigurations = pgTable(
   "alert_configurations",
   {
-    id: int("id").autoincrement().primaryKey(),
-    alertType: mysqlEnum("alert_type", [
-      "discrepancy",
-      "low_float",
-      "failed_reconciliation",
-      "suspicious_transaction",
-      "high_commission",
-      "other",
-    ]).notNull(),
-    providerId: int("provider_id"),
-    threshold: decimal("threshold", { precision: 15, scale: 2 }),
-    thresholdUnit: mysqlEnum("threshold_unit", [
-      "amount",
-      "percentage",
-      "count",
-    ]),
+    id: serial("id").primaryKey(),
+    alertType: alertTypeEnum("alert_type").notNull(),
+    providerId: integer("provider_id"),
+    threshold: numeric("threshold", { precision: 15, scale: 2 }),
+    thresholdUnit: thresholdUnitEnum("threshold_unit"),
     isActive: boolean("is_active").default(true),
-    notificationChannels: json("notification_channels"), // SMS, email, webhook
+    notificationChannels: jsonb("notification_channels"),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
   },
   table => ({
     alertTypeIdx: index("idx_alert_config_type").on(table.alertType),
@@ -502,44 +466,30 @@ export type AlertConfiguration = typeof alertConfigurations.$inferSelect;
 export type InsertAlertConfiguration = typeof alertConfigurations.$inferInsert;
 
 /**
- * Alert history - audit trail of all alerts triggered
+ * Alert history
  */
-export const alertHistory = mysqlTable(
+export const alertHistory = pgTable(
   "alert_history",
   {
-    id: int("id").autoincrement().primaryKey(),
-    alertConfigId: int("alert_config_id").notNull(),
-    providerId: int("provider_id"),
-    transactionId: int("transaction_id"),
+    id: serial("id").primaryKey(),
+    alertConfigId: integer("alert_config_id").notNull(),
+    providerId: integer("provider_id"),
+    transactionId: integer("transaction_id"),
     title: varchar("title", { length: 255 }).notNull(),
     message: text("message").notNull(),
-    severity: mysqlEnum("severity", [
-      "low",
-      "medium",
-      "high",
-      "critical",
-    ]).default("medium"),
-    status: mysqlEnum("status", [
-      "triggered",
-      "acknowledged",
-      "resolved",
-      "dismissed",
-    ]).default("triggered"),
-    acknowledgedBy: int("acknowledged_by"),
+    severity: severityEnum("severity").default("medium"),
+    status: alertStatusEnum("status").default("triggered"),
+    acknowledgedBy: integer("acknowledged_by"),
     acknowledgedAt: timestamp("acknowledged_at"),
     triggeredAt: timestamp("triggered_at").defaultNow(),
-    metadata: json("metadata"),
+    metadata: jsonb("metadata"),
   },
   table => ({
     alertConfigIdIdx: index("idx_alert_history_config").on(table.alertConfigId),
     providerIdIdx: index("idx_alert_history_provider").on(table.providerId),
-    transactionIdIdx: index("idx_alert_history_transaction").on(
-      table.transactionId
-    ),
+    transactionIdIdx: index("idx_alert_history_transaction").on(table.transactionId),
     statusIdx: index("idx_alert_history_status").on(table.status),
-    triggeredAtIdx: index("idx_alert_history_triggered_at").on(
-      table.triggeredAt
-    ),
+    triggeredAtIdx: index("idx_alert_history_triggered_at").on(table.triggeredAt),
   })
 );
 
@@ -547,44 +497,26 @@ export type AlertHistory = typeof alertHistory.$inferSelect;
 export type InsertAlertHistory = typeof alertHistory.$inferInsert;
 
 /**
- * Workforce Check-ins - tracks daily opening/closing cash positions for agents
+ * Workforce Check-ins
  */
-export const checkIns = mysqlTable(
+export const checkIns = pgTable(
   "check_ins",
   {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").notNull(),
-    branchId: int("branch_id"),
-
-    // Financial Snapshots
-    openingCash: decimal("opening_cash", { precision: 15, scale: 2 }),
-    closingCash: decimal("closing_cash", { precision: 15, scale: 2 }),
-    openingLineBalances: json("opening_line_balances"), // JSON map of providerId -> amount
-    closingLineBalances: json("closing_line_balances"), // JSON map of providerId -> amount
-
-    // Expected values (calculated by system)
-    expectedClosingCash: decimal("expected_closing_cash", {
-      precision: 15,
-      scale: 2,
-    }),
-    expectedClosingLineBalances: json("expected_closing_line_balances"),
-    discrepancyAmount: decimal("discrepancy_amount", {
-      precision: 15,
-      scale: 2,
-    }).default("0"),
-
-    // Temporal data
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id").notNull(),
+    branchId: integer("branch_id"),
+    openingCash: numeric("opening_cash", { precision: 15, scale: 2 }),
+    closingCash: numeric("closing_cash", { precision: 15, scale: 2 }),
+    openingLineBalances: jsonb("opening_line_balances"),
+    closingLineBalances: jsonb("closing_line_balances"),
+    expectedClosingCash: numeric("expected_closing_cash", { precision: 15, scale: 2 }),
+    expectedClosingLineBalances: jsonb("expected_closing_line_balances"),
+    discrepancyAmount: numeric("discrepancy_amount", { precision: 15, scale: 2 }).default("0"),
     checkInTime: timestamp("check_in_time").defaultNow(),
     checkOutTime: timestamp("check_out_time"),
-
-    // Status & Validation
-    status: mysqlEnum("status", [
-      "pending_adjustment",
-      "verified",
-      "discrepancy",
-    ]).default("verified"),
+    status: checkInStatusEnum("status").default("verified"),
     notes: text("notes"),
-    metadata: json("metadata"), // Can include GPS coordinates, device ID
+    metadata: jsonb("metadata"),
   },
   table => ({
     employeeDateIdx: index("idx_checkin_employee").on(table.employeeId),
@@ -597,20 +529,17 @@ export type CheckIn = typeof checkIns.$inferSelect;
 export type InsertCheckIn = typeof checkIns.$inferInsert;
 
 /**
- * Worker Balance Snapshots - tracks mid-shift updates of cash and floats
+ * Worker Balance Snapshots
  */
-export const workerBalanceSnapshots = mysqlTable(
+export const workerBalanceSnapshots = pgTable(
   "worker_balance_snapshots",
   {
-    id: int("id").autoincrement().primaryKey(),
-    checkInId: int("check_in_id").notNull(),
-    employeeId: int("employee_id").notNull(),
-
-    // Updates
-    cashAmount: decimal("cash_amount", { precision: 15, scale: 2 }),
-    floatBalances: json("float_balances"), // JSON map of providerId -> amount
-    updateReason: varchar("update_reason", { length: 255 }), // e.g. "After big cash-out"
-
+    id: serial("id").primaryKey(),
+    checkInId: integer("check_in_id").notNull(),
+    employeeId: integer("employee_id").notNull(),
+    cashAmount: numeric("cash_amount", { precision: 15, scale: 2 }),
+    floatBalances: jsonb("float_balances"),
+    updateReason: varchar("update_reason", { length: 255 }),
     timestamp: timestamp("timestamp").defaultNow(),
   },
   table => ({
@@ -620,30 +549,24 @@ export const workerBalanceSnapshots = mysqlTable(
 );
 
 export type WorkerBalanceSnapshot = typeof workerBalanceSnapshots.$inferSelect;
-export type InsertWorkerBalanceSnapshot =
-  typeof workerBalanceSnapshots.$inferInsert;
+export type InsertWorkerBalanceSnapshot = typeof workerBalanceSnapshots.$inferInsert;
 
 /**
- * CSV imports - tracks bulk imports from offline providers
+ * CSV imports
  */
-export const csvImports = mysqlTable(
+export const csvImports = pgTable(
   "csv_imports",
   {
-    id: int("id").autoincrement().primaryKey(),
-    providerId: int("provider_id").notNull(),
+    id: serial("id").primaryKey(),
+    providerId: integer("provider_id").notNull(),
     fileName: varchar("file_name", { length: 255 }).notNull(),
     importDate: date("import_date").notNull(),
-    totalRecords: int("total_records"),
-    successfulRecords: int("successful_records"),
-    failedRecords: int("failed_records"),
-    status: mysqlEnum("status", [
-      "pending",
-      "processing",
-      "completed",
-      "failed",
-    ]).default("pending"),
+    totalRecords: integer("total_records"),
+    successfulRecords: integer("successful_records"),
+    failedRecords: integer("failed_records"),
+    status: csvImportStatusEnum("status").default("pending"),
     errorLog: text("error_log"),
-    importedBy: int("imported_by"),
+    importedBy: integer("imported_by"),
     createdAt: timestamp("created_at").defaultNow(),
   },
   table => ({
@@ -654,43 +577,28 @@ export const csvImports = mysqlTable(
 
 export type CsvImport = typeof csvImports.$inferSelect;
 export type InsertCsvImport = typeof csvImports.$inferInsert;
+
 /**
- * Salaries table - tracks monthly payroll based on commission performance (15% rule)
+ * Salaries table
  */
-export const salaries = mysqlTable(
+export const salaries = pgTable(
   "salaries",
   {
-    id: int("id").autoincrement().primaryKey(),
-    employeeId: int("employee_id").references(() => employees.id),
-    month: varchar("month", { length: 7 }).notNull(), // YYYY-MM
-    totalCommissionProduced: decimal("total_commission_produced", {
-      precision: 15,
-      scale: 2,
-    }).notNull(),
-    salaryAmount: decimal("salary_amount", {
-      precision: 15,
-      scale: 2,
-    }).notNull(),
-    bonusAmount: decimal("bonus_amount", { precision: 15, scale: 2 }).default(
-      "0"
-    ),
-    deductions: decimal("deductions", { precision: 15, scale: 2 }).default("0"),
-    netPayout: decimal("net_payout", { precision: 15, scale: 2 }).notNull(),
-    status: mysqlEnum("status", [
-      "pending",
-      "processing",
-      "disbursed",
-      "failed",
-    ]).default("pending"),
+    id: serial("id").primaryKey(),
+    employeeId: integer("employee_id").references(() => employees.id),
+    month: varchar("month", { length: 7 }).notNull(),
+    totalCommissionProduced: numeric("total_commission_produced", { precision: 15, scale: 2 }).notNull(),
+    salaryAmount: numeric("salary_amount", { precision: 15, scale: 2 }).notNull(),
+    bonusAmount: numeric("bonus_amount", { precision: 15, scale: 2 }).default("0"),
+    deductions: numeric("deductions", { precision: 15, scale: 2 }).default("0"),
+    netPayout: numeric("net_payout", { precision: 15, scale: 2 }).notNull(),
+    status: salaryStatusEnum("status").default("pending"),
     payoutReference: varchar("payout_reference", { length: 255 }),
     disbursedAt: timestamp("disbursed_at"),
     createdAt: timestamp("created_at").defaultNow(),
   },
   table => ({
-    employeeMonthIdx: unique("unique_employee_month").on(
-      table.employeeId,
-      table.month
-    ),
+    employeeMonthIdx: unique("unique_employee_month").on(table.employeeId, table.month),
     employeeIdIdx: index("idx_salary_employee").on(table.employeeId),
     monthIdx: index("idx_salary_month").on(table.month),
   })

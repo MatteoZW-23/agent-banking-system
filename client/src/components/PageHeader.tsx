@@ -14,7 +14,7 @@ interface PageHeaderProps {
 export default function PageHeader({
   title,
   subtitle,
-  category = "Enterprise Operations",
+  category = "Operations",
   actions,
   refreshing = false,
   onRefresh,
@@ -26,52 +26,39 @@ export default function PageHeader({
   });
 
   return (
-    <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-8 pb-3 border-b border-slate-200 dark:border-slate-800 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="h-px w-8 bg-primary/40 shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] font-inter italic">
-            {category} • Node Sync Active
-          </span>
-        </div>
-
-        <div className="space-y-1">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white font-outfit uppercase italic leading-none">
-            {title}
-          </h1>
-          <p className="text-sm md:text-base font-semibold text-slate-600 dark:text-slate-400 font-inter uppercase tracking-widest italic">
-            {subtitle}
-          </p>
-        </div>
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-gray-200 dark:border-slate-700">
+      <div>
+        <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-1">
+          {category}
+        </p>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
+          {title}
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+          {subtitle}
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20" />
-          <span className="text-[10px] h-4 font-black font-outfit uppercase tracking-widest text-slate-700 dark:text-white leading-none">
-            {currentDate} Hub Live
-          </span>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-xs text-gray-600 dark:text-slate-300">
+          <div className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="font-medium">{currentDate}</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {onRefresh && (
-            <Button
-              variant="outline"
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="h-12 w-12 rounded-[1.25rem] border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 hover:text-primary transition-all active:scale-90 shadow-sm"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin text-primary" : ""}`}
-              />
-            </Button>
-          )}
-          {actions}
-        </div>
+        {onRefresh && (
+          <Button
+            variant="outline"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="h-10 w-10 rounded-lg"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+          </Button>
+        )}
+        {actions}
       </div>
-
-      {/* Visual Accent Decoration */}
-      <div className="absolute -bottom-[2px] left-0 h-1 w-24 bg-primary/60 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.8)]" />
     </div>
   );
 }

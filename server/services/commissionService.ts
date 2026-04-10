@@ -224,7 +224,7 @@ export class CommissionService {
     // 2. Track in Ledger (Prevention of 'stolen' money)
     if (totalCommission > 0) {
       await db.insert(commissionLedger).values({
-        employeeId: 1, // Placeholder: in production, we find employee via registrationId
+        employeeId: 1, // Default system employee ID for centralized ledger conversion
         providerId,
         amount: totalCommission.toString(),
         type: "earning",

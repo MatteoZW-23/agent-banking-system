@@ -29,7 +29,8 @@ import { useAuth } from "./_core/hooks/useAuth";
 function Router() {
   const { user, loading } = useAuth();
   
-  if (loading) return null;
+  // Only block the entire app if we're not on the login page
+  if (loading && window.location.pathname !== "/login") return null;
 
   const isAdmin = user?.role === "admin";
   const isSupervisor = user?.role === "supervisor";

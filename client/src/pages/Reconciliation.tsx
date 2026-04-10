@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/PageHeader";
+import { toast } from "sonner";
 
 export default function Reconciliation() {
   const { isAuthenticated } = useAuth({ redirectOnUnauthenticated: true });
@@ -60,29 +61,26 @@ export default function Reconciliation() {
     switch (status) {
       case "matched":
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-3 py-1 font-black text-[10px] tracking-widest">
-            <CheckCircle2 className="w-3 h-3 mr-1" /> MATCHED
+          <Badge className="bg-emerald-50 text-emerald-700 border-none px-2 py-0.5 font-medium text-xs">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Matched
           </Badge>
         );
       case "mismatch":
         return (
-          <Badge className="bg-amber-500/10 text-amber-600 border-none px-4 py-1.5 font-black text-[10px] tracking-widest">
-            <AlertTriangle className="w-4 h-4 mr-2" /> MISMATCH
+          <Badge className="bg-amber-50 text-amber-700 border-none px-2 py-0.5 font-medium text-xs">
+            <AlertTriangle className="w-3 h-3 mr-1" /> Mismatch
           </Badge>
         );
       case "investigating":
         return (
-          <Badge className="bg-rose-500/10 text-rose-600 border-none px-3 py-1 font-black text-[10px] tracking-widest">
-            <Activity className="w-3 h-3 mr-1" /> INVESTIGATING
+          <Badge className="bg-red-50 text-red-700 border-none px-2 py-0.5 font-medium text-xs">
+            <Activity className="w-3 h-3 mr-1" /> Investigating
           </Badge>
         );
       default:
         return (
-          <Badge
-            variant="secondary"
-            className="font-black text-[10px] tracking-widest"
-          >
-            {status.toUpperCase()}
+          <Badge variant="secondary" className="font-medium text-xs">
+            {status}
           </Badge>
         );
     }
@@ -95,49 +93,48 @@ export default function Reconciliation() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-12 animate-fade-in pb-20">
-        {/* Sync Header Node */}
+      <div className="space-y-8 pb-16">
         <PageHeader
-          title="Verify Records"
+          title="Reconciliation"
           subtitle="Compare your records with provider statements."
-          category="Reconcile"
+          category="Finance"
           actions={
             <Button
               onClick={handleReconcileAll}
               disabled={reconcileAllMutation.isPending}
-              className="h-12 rounded-[1.25rem] premium-gradient text-white px-8 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all"
+              className="h-9 rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-5 font-medium text-sm"
             >
               {reconcileAllMutation.isPending ? (
-                <RefreshCw className="mr-3 h-4 w-4 animate-spin text-white" />
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin text-white" />
               ) : (
-                <Zap className="mr-3 h-4 w-4 text-white" />
+                <Zap className="mr-2 h-4 w-4 text-white" />
               )}
               Reconcile All
             </Button>
           }
           onRefresh={() => {
             providersQuery.refetch();
-            toast.success("Status updated");
+            toast.success("Refreshed");
           }}
         />
 
-        {/* Global Controls bar */}
-        <div className="grid gap-4 md:grid-cols-4 p-4 glass rounded-2xl border border-slate-200 dark:border-slate-800">
+        {/* Filters */}
+        <div className="grid gap-3 md:grid-cols-4 p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" /> Select Date
+            <label className="text-xs font-medium text-gray-500 flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> Date
             </label>
             <input
               type="date"
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
-              className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold"
+              className="w-full h-9 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
 
           <div className="space-y-1.5 lg:col-span-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-1.5">
-              <RefreshCw className="w-3 h-3" /> Targeted Provider
+            <label className="text-xs font-medium text-gray-500 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Provider
             </label>
             <select
               value={selectedProvider || ""}
@@ -146,9 +143,9 @@ export default function Reconciliation() {
                   e.target.value ? parseInt(e.target.value) : null
                 )
               }
-              className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none text-sm font-semibold"
+              className="w-full h-9 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
-              <option value="">Select an active gateway...</option>
+              <option value="">Select provider...</option>
               {providersQuery.data?.map((p: any) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -157,151 +154,118 @@ export default function Reconciliation() {
             </select>
           </div>
 
-          <div className="flex items-end pb-0.5">
+          <div className="flex items-end">
             <Button
               onClick={handleReconcileProvider}
               disabled={
                 !selectedProvider || reconcileProviderMutation.isPending
               }
-              className="w-full h-10 rounded-xl premium-gradient text-white font-bold shadow-lg shadow-primary/20"
+              className="w-full h-9 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm"
             >
               {reconcileProviderMutation.isPending
                 ? "Processing..."
-                : "Initiate Sync"}
+                : "Run Reconciliation"}
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Active Reconciliation Report */}
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Report */}
+          <div className="lg:col-span-2 space-y-6">
             {latestReport ? (
-              <Card className="border-none shadow-sm dark:bg-slate-900/50 overflow-hidden animate-fade-in relative">
-                <div className="h-1.5 premium-gradient w-full" />
-                <CardHeader className="flex flex-row items-center justify-between pt-8 pb-6 border-b border-slate-50 dark:border-slate-800">
-                  <div className="space-y-1">
+              <Card className="border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-400 w-full" />
+                <CardHeader className="flex flex-row items-center justify-between pt-6 pb-4 border-b border-gray-100 dark:border-slate-700">
+                  <div>
                     <div className="flex items-center gap-2">
-                      <CardTitle className="text-2xl">
-                        {latestReport.providerName}
-                      </CardTitle>
+                      <CardTitle className="text-xl">{latestReport.providerName}</CardTitle>
                       {getStatusBadge(latestReport.status)}
                     </div>
-                    <CardDescription className="font-mono text-[10px] uppercase tracking-widest font-bold">
-                      Audit Period: {latestReport.date}
+                    <CardDescription className="font-mono text-xs mt-1">
+                      Date: {latestReport.date}
                     </CardDescription>
                   </div>
-                  <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center">
-                    <ShieldCheck className="h-6 w-6 text-primary" />
+                  <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                    <ShieldCheck className="h-5 w-5 text-blue-600" />
                   </div>
                 </CardHeader>
-                <CardContent className="pt-8 space-y-10">
-                  {/* Summary Metrics */}
-                  <div className="grid gap-4 md:grid-cols-4">
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        Expected
-                      </p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white">
-                        $
-                        {latestReport.totalExpected.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
+                <CardContent className="pt-6 space-y-6">
+                  {/* Summary metrics */}
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Expected</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
+                        ${latestReport.totalExpected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </p>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        Actual
-                      </p>
-                      <p className="text-xl font-black text-slate-900 dark:text-white">
-                        $
-                        {latestReport.totalActual.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Actual</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
+                        ${latestReport.totalActual.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </p>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        Delta
-                      </p>
-                      <p
-                        className={`text-xl font-black ${latestReport.discrepancy < 0 ? "text-rose-500" : "text-emerald-500"}`}
-                      >
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Difference</p>
+                      <p className={`text-lg font-bold ${latestReport.discrepancy < 0 ? "text-red-600" : "text-emerald-600"}`}>
                         ${latestReport.discrepancy.toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-2xl">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        Error Margin
-                      </p>
-                      <p
-                        className={`text-xl font-black ${Math.abs(latestReport.discrepancyPercentage) > 5 ? "text-rose-500" : "text-emerald-500"}`}
-                      >
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
+                      <p className="text-xs text-gray-500 mb-1">Variance</p>
+                      <p className={`text-lg font-bold ${Math.abs(latestReport.discrepancyPercentage) > 5 ? "text-red-600" : "text-emerald-600"}`}>
                         {latestReport.discrepancyPercentage.toFixed(2)}%
                       </p>
                     </div>
                   </div>
 
-                  {/* Flow Visualization */}
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex flex-col items-center text-center group transition-all hover:bg-emerald-500/10">
-                      <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-3" />
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
-                        Matched
-                      </p>
-                      <p className="text-4xl font-black text-emerald-600">
-                        {latestReport.matchedCount}
-                      </p>
+                  {/* Breakdown */}
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 rounded-lg flex flex-col items-center text-center">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-600 mb-2" />
+                      <p className="text-xs text-gray-500 mb-0.5">Matched</p>
+                      <p className="text-3xl font-bold text-emerald-600">{latestReport.matchedCount}</p>
                     </div>
-                    <div className="p-6 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex flex-col items-center text-center group transition-all hover:bg-amber-500/10">
-                      <AlertTriangle className="h-8 w-8 text-amber-500 mb-3" />
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
-                        Mismatch
-                      </p>
-                      <p className="text-4xl font-black text-amber-500">
-                        {latestReport.mismatchCount}
-                      </p>
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 rounded-lg flex flex-col items-center text-center">
+                      <AlertTriangle className="h-6 w-6 text-amber-600 mb-2" />
+                      <p className="text-xs text-gray-500 mb-0.5">Mismatch</p>
+                      <p className="text-3xl font-bold text-amber-600">{latestReport.mismatchCount}</p>
                     </div>
-                    <div className="p-6 bg-slate-100/40 border border-slate-200/40 rounded-2xl flex flex-col items-center text-center group transition-all hover:bg-slate-100/60">
-                      <RefreshCw className="h-8 w-8 text-slate-400 mb-3" />
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
-                        Unprocessed
-                      </p>
-                      <p className="text-4xl font-black text-slate-400">
-                        {latestReport.unmatchedCount}
-                      </p>
+                    <div className="p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 rounded-lg flex flex-col items-center text-center">
+                      <RefreshCw className="h-6 w-6 text-gray-400 mb-2" />
+                      <p className="text-xs text-gray-500 mb-0.5">Unprocessed</p>
+                      <p className="text-3xl font-bold text-gray-500">{latestReport.unmatchedCount}</p>
                     </div>
                   </div>
 
-                  {/* Mismatches Detail */}
+                  {/* Mismatch details */}
                   {latestReport.mismatches.length > 0 && (
-                    <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
-                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-rose-500" />{" "}
-                        Discrepancy Registry
+                    <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-slate-700">
+                      <h3 className="text-sm font-medium text-gray-600 flex items-center gap-1.5">
+                        <AlertTriangle className="h-4 w-4 text-red-500" /> Discrepancies
                       </h3>
-                      <div className="space-y-3 pb-4">
+                      <div className="space-y-2">
                         {latestReport.mismatches.map(
                           (mismatch: any, idx: number) => (
                             <div
                               key={idx}
-                              className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-rose-200 transition-all group"
+                              className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg"
                             >
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-tight group-hover:text-primary transition-colors">
+                              <div>
+                                <p className="text-xs font-mono text-gray-400">
                                   REF: {mismatch.reference}
                                 </p>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                <p className="text-sm text-gray-700 dark:text-slate-200 mt-0.5">
                                   Expected{" "}
-                                  <span className="text-emerald-500">
+                                  <span className="text-emerald-600 font-medium">
                                     ${mismatch.expected.toFixed(2)}
                                   </span>{" "}
                                   vs. Actual{" "}
-                                  <span className="text-amber-500">
+                                  <span className="text-amber-600 font-medium">
                                     ${mismatch.actual.toFixed(2)}
                                   </span>
                                 </p>
                               </div>
-                              <Badge className="bg-rose-500/10 text-rose-500 border-none px-3 py-1 font-black text-xs">
+                              <Badge className="bg-red-50 text-red-600 border-none px-2 py-0.5 font-medium text-xs">
                                 -${mismatch.difference.toFixed(2)}
                               </Badge>
                             </div>
@@ -313,86 +277,67 @@ export default function Reconciliation() {
                 </CardContent>
               </Card>
             ) : (
-              <div
-                className="flex flex-col items-center justify-center py-40 bg-white dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 group hover:border-primary/40 transition-all cursor-pointer"
-                onClick={() => setShowForm?.(true)}
-              >
-                <div className="h-20 w-20 bg-slate-50 dark:bg-slate-900 rounded-3xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
-                  <ClipboardCheck className="h-10 w-10 text-slate-300" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight">
-                  System Idle
+              <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-slate-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700">
+                <ClipboardCheck className="h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-white">
+                  Ready to reconcile
                 </h3>
-                <p className="text-sm font-medium text-slate-400 max-w-xs mt-2 text-center leading-relaxed">
-                  Initiate a sync operation to identify transaction gaps across
-                  the regional cluster.
+                <p className="text-sm text-gray-400 max-w-xs mt-1 text-center">
+                  Select a provider and date above to compare transactions.
                 </p>
-                <Button
-                  variant="ghost"
-                  className="mt-6 text-xs font-bold uppercase tracking-widest text-primary"
-                >
-                  Begin Operations
-                </Button>
               </div>
             )}
           </div>
 
-          {/* Global Summary Logs */}
-          <div className="space-y-8">
-            <Card className="border-none shadow-sm dark:bg-slate-900/50 flex flex-col">
-              <CardHeader className="pb-6 border-b border-slate-50 dark:border-slate-800">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <ArrowUpRight className="h-5 w-5 text-slate-400" /> Cluster
-                  Summary
+          {/* Summary sidebar */}
+          <div className="space-y-6">
+            <Card className="border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col">
+              <CardHeader className="pb-4 border-b border-gray-100 dark:border-slate-700">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ArrowUpRight className="h-4 w-4 text-gray-400" /> Summary
                 </CardTitle>
-                <CardDescription>
-                  Aggregate health of all active nodes
-                </CardDescription>
+                <CardDescription>All providers overview</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="pt-4">
                 {allReports && allReports.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {allReports.map((report: any) => (
                       <div
                         key={report.providerId}
-                        className="flex flex-col gap-4 p-5 bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800 rounded-2xl group transition-all hover:bg-slate-50"
+                        className="flex flex-col gap-3 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-lg"
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`h-10 w-10 rounded-xl flex items-center justify-center ${report.status === "matched" ? "bg-emerald-500/10 font-bold" : "bg-amber-500/10 font-bold"}`}
-                            >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`h-8 w-8 rounded-md flex items-center justify-center ${report.status === "matched" ? "bg-emerald-50" : "bg-amber-50"}`}>
                               {report.status === "matched" ? (
-                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                               ) : (
-                                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
                               )}
                             </div>
-                            <div className="space-y-0.5">
-                              <p className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
                                 {report.providerName}
                               </p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                Sync: ${report.totalActual.toLocaleString()}
+                              <p className="text-xs text-gray-500">
+                                ${report.totalActual.toLocaleString()}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p
-                              className={`text-sm font-black ${report.discrepancy === 0 ? "text-emerald-500" : "text-rose-500"}`}
-                            >
+                            <p className={`text-sm font-semibold ${report.discrepancy === 0 ? "text-emerald-600" : "text-red-600"}`}>
                               {report.discrepancy === 0
-                                ? "STABLE"
+                                ? "Matched"
                                 : `-$${report.discrepancy.toLocaleString()}`}
                             </p>
-                            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
-                              {report.discrepancyPercentage.toFixed(2)}% DELTA
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {report.discrepancyPercentage.toFixed(2)}%
                             </p>
                           </div>
                         </div>
-                        <div className="w-full h-1 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
-                            className={`h-full transition-all duration-1000 ${report.status === "matched" ? "bg-emerald-500" : "bg-amber-500"}`}
+                            className={`h-full transition-all duration-700 ${report.status === "matched" ? "bg-emerald-500" : "bg-amber-500"}`}
                             style={{
                               width: `${Math.max(10, 100 - Math.abs(report.discrepancyPercentage))}%`,
                             }}
@@ -402,27 +347,25 @@ export default function Reconciliation() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-20 text-center flex flex-col items-center">
-                    <Activity className="h-10 w-10 text-slate-200 mb-4" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] max-w-[150px]">
-                      Waiting for global sequence initiation
+                  <div className="py-16 text-center flex flex-col items-center">
+                    <Activity className="h-8 w-8 text-gray-300 mb-3" />
+                    <p className="text-xs text-gray-400">
+                      Run "Reconcile All" to see results
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Compliance Hint */}
-            <div className="p-8 rounded-3xl premium-gradient text-white relative overflow-hidden shadow-2xl">
-              <div className="relative z-10 space-y-4">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5" />
-                  <h4 className="text-lg font-bold">Auditing Active</h4>
+            {/* Compliance note */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+              <div className="space-y-3">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4" />
+                  <h4 className="text-sm font-semibold">Audit Active</h4>
                 </div>
-                <p className="text-sm text-white/80 leading-relaxed font-medium">
-                  The system automatically flags any transaction mismatch
-                  exceeding <span className="text-white font-bold">$5.00</span>{" "}
-                  for human investigation in the security portal.
+                <p className="text-sm text-blue-100 leading-relaxed">
+                  The system auto-flags any mismatch exceeding <span className="text-white font-semibold">$5.00</span> for manual review.
                 </p>
               </div>
             </div>

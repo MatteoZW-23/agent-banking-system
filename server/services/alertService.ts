@@ -127,9 +127,8 @@ export class AlertService {
     const message = `${notification.title}: ${notification.message}`;
 
     try {
-      // This is a placeholder for actual SMS service integration
-      // In production, integrate with Africa's Talking, Twilio, or similar
-      console.log(`[SMS] Sending to ${alertPhone}: ${message}`);
+      // TODO: Integrate with SMS gateway (Africa's Talking / Twilio)
+      console.log(`[Notification] Auto-alert to ${alertPhone}: ${message}`);
 
       // Example: Africa's Talking integration
       // const response = await fetch('https://api.sandbox.africastalking.com/version1/messaging', {

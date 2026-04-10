@@ -1,29 +1,39 @@
 import {
-  int,
-  mysqlEnum,
-  mysqlTable,
+  integer,
+  pgEnum,
+  pgTable,
   text,
   timestamp,
   varchar,
   index,
-} from "drizzle-orm/mysql-core";
+  serial,
+} from "drizzle-orm/pg-core";
+
+export const smsStatusEnum = pgEnum("sms_status", [
+  "pending",
+  "sent",
+  "delivered",
+  "failed",
+]);
+
+export const smsSeverityEnum = pgEnum("sms_severity", [
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
 
 /**
- * SMS Notifications - logs all SMS messages sent for alerts
+ * SMS Notifications
  */
-export const smsNotifications = mysqlTable(
+export const smsNotifications = pgTable(
   "sms_notifications",
   {
-    id: int("id").autoincrement().primaryKey(),
-    alertId: int("alert_id").notNull(),
+    id: serial("id").primaryKey(),
+    alertId: integer("alert_id").notNull(),
     phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
     message: text("message").notNull(),
-    status: mysqlEnum("status", [
-      "pending",
-      "sent",
-      "delivered",
-      "failed",
-    ]).default("pending"),
+    status: smsStatusEnum("status").default("pending"),
     messageId: varchar("message_id", { length: 100 }),
     sentAt: timestamp("sent_at"),
     deliveredAt: timestamp("delivered_at"),
@@ -42,24 +52,19 @@ export type SMSNotification = typeof smsNotifications.$inferSelect;
 export type InsertSMSNotification = typeof smsNotifications.$inferInsert;
 
 /**
- * SMS Configuration - stores SMS alert settings per user/system
+ * SMS Configuration
  */
-export const smsConfigurations = mysqlTable(
+export const smsConfigurations = pgTable(
   "sms_configurations",
   {
-    id: int("id").autoincrement().primaryKey(),
-    userId: int("user_id"),
-    phoneNumbers: text("phone_numbers").notNull(), // JSON array of phone numbers
-    alertTypes: text("alert_types").notNull(), // JSON array of alert types to notify
-    minSeverity: mysqlEnum("min_severity", [
-      "low",
-      "medium",
-      "high",
-      "critical",
-    ]).default("high"),
-    isEnabled: int("is_enabled").default(1),
+    id: serial("id").primaryKey(),
+    userId: integer("user_id"),
+    phoneNumbers: text("phone_numbers").notNull(),
+    alertTypes: text("alert_types").notNull(),
+    minSeverity: smsSeverityEnum("min_severity").default("high"),
+    isEnabled: integer("is_enabled").default(1),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
   },
   table => ({
     userIdIdx: index("idx_sms_config_user").on(table.userId),

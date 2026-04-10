@@ -203,12 +203,6 @@ export default function ComponentsShowcase() {
       const aiResponse: Message = {
         role: "assistant",
         content: response,
-        get content() {
-          return this._content;
-        },
-        set content(value) {
-          this._content = value;
-        },
       };
       setChatMessages(prev => [...prev, aiResponse]);
       setIsChatLoading(false);

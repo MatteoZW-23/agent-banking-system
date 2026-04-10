@@ -79,7 +79,7 @@ export class GuardianService {
         providerId: txn.providerId,
         transactionId: txn.id,
         title: `CRITICAL RISK: ${txn.type.toUpperCase()} on Provider ${txn.providerId}`,
-        message: `Sentinel detected high-risk activity (${(riskScore * 100).toFixed(0)}%). Flags: ${flags.join(", ")}`,
+        message: `Security Engine detected high-risk activity (${(riskScore * 100).toFixed(0)}%). Flags: ${flags.join(", ")}`,
         severity: riskScore > 0.7 ? "critical" : "high",
         status: "triggered",
         triggeredAt: new Date()
@@ -89,7 +89,7 @@ export class GuardianService {
       if (riskScore > 0.8) {
         await db.update(transactions).set({ 
           reconciliationStatus: "investigating",
-          failureReason: "SENTINEL_AUTO_FREEZE_HIGH_RISK"
+          failureReason: "GUARD_AUTO_FREEZE_HIGH_RISK"
         }).where(eq(transactions.id, txn.id));
       }
     }

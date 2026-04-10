@@ -29,9 +29,14 @@ import {
   deleteAgentLine,
   getCommissionStructures,
   getUserByEmail,
+  getUserByOpenId,
+  getEmployeeByEmail,
+  setUserPassword,
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
+import { setMfaSecret, verifyMfaToken, disableMfa } from "./services/mfaService";
+import { supabaseAuthService } from "./services/supabaseAuth";
 import { alertService } from "./services/alertService";
 import { commissionService } from "./services/commissionService";
 import { csvImportService } from "./services/csvImport";
@@ -41,14 +46,16 @@ import { systemRouter } from "./_core/systemRouter";
 import { invokeLLM } from "./_core/llm";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { floatRequests } from "../drizzle/schema";
+import { floatRequests, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { sdk } from "./_core/sdk";
+import { upsertUser } from "./db";
+import { ENV } from "./_core/env";
 
-// Supervisor: admin + supervisor can access
 const supervisorProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const role = (ctx.user as any)?.role;
-  if (role !== "admin" && role !== "supervisor") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Supervisor or Admin access required." });
+  if (role !== "admin" && role !== "supervisor" && role !== "manager") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Management access required." });
   }
   return next({ ctx });
 });
@@ -61,7 +68,10 @@ export const appRouter = router({
 
   // ── AUTH ──────────────────────────────────────────────────────────────
   auth: router({
-    me: protectedProcedure.query(({ ctx }) => ctx.user),
+    me: protectedProcedure.query(({ ctx }) => {
+      console.log(`[Auth] me query called for user: ${ctx.user?.email} (${ctx.user?.role})`);
+      return ctx.user;
+    }),
 
     login: publicProcedure
       .input(
@@ -78,13 +88,17 @@ export const appRouter = router({
           (e) => e.email?.toLowerCase() === input.email.toLowerCase()
         );
 
-        const isAdmin = input.email === "admin@agent.co.zw" && input.password === "admin123";
-        const isDefaultSupervisor = input.email === "takudzwa@agent.co.zw" && input.password === "supervisor123";
-        const isAgent = !!matched && input.password === "agent123" && matched.role === "agent";
-        const isSupervisor =
-          (!!matched && input.password === "supervisor123" && matched.role === "supervisor") || isDefaultSupervisor;
+        // MFA CHECK
+        const userRec = await getUserByEmail(input.email);
+        
+        // Check DB password first if it exists
+        const isDbPasswordValid = userRec?.password && userRec.password === input.password;
 
-        if (!isAdmin && !isAgent && !isSupervisor) {
+        const isAdmin = (userRec?.role === "admin" && isDbPasswordValid);
+        const isAgent = (userRec?.role === "agent" && isDbPasswordValid);
+        const isSupervisor = (userRec?.role === "supervisor" && isDbPasswordValid);
+
+        if (!isAdmin && !isAgent && !isSupervisor && !isDbPasswordValid) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "Wrong email or password.",
@@ -99,8 +113,6 @@ export const appRouter = router({
         if (input.role === "supervisor" && !isSupervisor)
           throw new TRPCError({ code: "FORBIDDEN", message: "These are not Supervisor credentials." });
 
-        // MFA CHECK
-        const userRec = await getUserByEmail(input.email);
         if (userRec?.mfaEnabled) {
           if (!input.mfaToken) {
             return { success: false, mfaRequired: true };
@@ -116,16 +128,121 @@ export const appRouter = router({
           }
         }
 
-        ctx.res.cookie("dev_role", input.role, { path: "/", maxAge: 3600000 });
+        const openId = userRec?.openId || (isAdmin ? (ENV.ownerOpenId || "admin-id") : (matched?.openId || `usr-${input.role}-${input.email}`));
+        
+        // Ensure user exists in DB for session resolution
+        if (isAdmin || matched || userRec) {
+          await upsertUser({
+            openId,
+            name: userRec?.name || (isAdmin ? "Administrator" : (matched?.name || input.email.split("@")[0])),
+            email: input.email,
+            role: input.role,
+            lastSignedIn: new Date(),
+          });
+        }
+
+        const sessionToken = await sdk.createSessionToken(openId, { 
+          name: userRec?.name || (isAdmin ? "Admin" : (matched?.name || input.email)) 
+        });
+
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+        ctx.res.cookie("portal_role", input.role, { path: "/", maxAge: 3600000 });
+
         return { success: true, role: input.role };
       }),
 
+    forgotPassword: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        let user = await getUserByEmail(input.email);
+        const employee = await getEmployeeByEmail(input.email);
+        const isAdminEmail = input.email.toLowerCase() === "admin@agent.co.zw";
+
+        if (!user && !employee && !isAdminEmail) {
+          // Security: don't reveal if user exists, but we return success message
+          return { success: true };
+        }
+
+        const openId = user?.openId || 
+                       (isAdminEmail ? (ENV.ownerOpenId || "admin-id") : 
+                       (employee ? `usr-${employee.role}-${employee.uniqueCode}` : `forgot-${input.email}`));
+        
+        if (!user) {
+          await upsertUser({
+            openId,
+            name: isAdminEmail ? "Administrator" : (employee?.name || input.email.split("@")[0]),
+            email: input.email,
+            role: isAdminEmail ? "admin" : ((employee?.role as any) || "agent"),
+          });
+          user = await getUserByOpenId(openId);
+        }
+
+        // Generate a simple reset code for internal tracking
+        const resetCode = employee?.uniqueCode || openId;
+        
+        // Trigger Supabase Realtime Password Reset Email
+        const emailSent = await supabaseAuthService.sendResetEmail(input.email);
+        
+        if (emailSent) {
+          console.log(`[AUTH] Supabase sent password reset email to ${input.email}`);
+        } else {
+          console.log(`[AUTH] Local fallback: reset code for ${input.email} is ${resetCode}`);
+        }
+        
+        return { success: true, resetCode };
+      }),
+
+    setupPassword: publicProcedure
+      .input(z.object({ code: z.string(), password: z.string().min(6) }))
+      .mutation(async ({ input }) => {
+        const allEmployees = await getAllEmployees();
+        const matched = allEmployees.find(e => e.uniqueCode === input.code);
+        
+        let email = "";
+        if (matched) {
+          email = matched.email!;
+        } else {
+          // If code is not employee code, check if it's an openId
+          const user = await getUserByOpenId(input.code);
+          if (user) {
+            email = user.email!;
+          } else {
+             // Second fallback: check if code itself is an email
+             if (input.code.includes("@")) {
+               email = input.code;
+             }
+          }
+        }
+
+        if (!email) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Invalid reset code." });
+        }
+
+        await setUserPassword(email, input.password);
+        return { success: true };
+      }),
+
     logout: protectedProcedure.mutation(({ ctx }) => {
-      ctx.res.clearCookie("dev_role", { path: "/" });
+      ctx.res.clearCookie("portal_role", { path: "/" });
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true };
     }),
+    agreeToTerms: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database unavailable");
+        
+        await db.update(users)
+          .set({
+            agreedToTerms: true,
+            termsAgreedAt: new Date()
+          })
+          .where(eq(users.id, ctx.user.id));
+        
+        return { success: true };
+      }),
   }),
 
   // ── AI & GUARDIAN ──────────────────────────────────────────────────
@@ -145,14 +262,14 @@ export const appRouter = router({
               {
                 role: "system",
                 content:
-                  "You are the AgentTrack AI Ethical Shield. Help detect fraud, smurfing, and collusion in agent banking. Be professional and direct.",
+                  "You are the Sovereign Finance Security Engine. Help detect fraud, smurfing, and collusion in agent banking. Be professional and direct.",
               },
               ...input.messages,
             ],
           });
           return response.choices[0]?.message?.content || "No response available.";
         } catch {
-          return "AI assistant is temporarily unavailable.";
+          return "Security Engine is temporarily unavailable.";
         }
       }),
 
@@ -165,6 +282,12 @@ export const appRouter = router({
 
   // ── NODES (Workforce) ──────────────────────────────────────────────
   nodes: router({
+    getMyEmployeeInfo: protectedProcedure.query(async ({ ctx }) => {
+      const email = ctx.user?.email || "";
+      if (!email) return null;
+      return await getEmployeeByEmail(email);
+    }),
+
     listBranches: protectedProcedure.query(async () => await getAllBranches()),
 
     listProviders: protectedProcedure.query(async () => await getAllProviders()),
@@ -174,7 +297,6 @@ export const appRouter = router({
     createEmployee: supervisorProcedure
       .input(
         z.object({
-          uniqueCode: z.string().optional(),
           name: z.string(),
           email: z.string().email().optional().or(z.literal("")),
           phone: z.string().optional(),
@@ -185,7 +307,7 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const employee = await createEmployee(input);
-        console.log(`[ONBOARDING] New employee: ${input.name} (${input.uniqueCode})`);
+        console.log(`[ONBOARDING] New employee registered: ${input.name} (${employee?.uniqueCode})`);
         return employee;
       }),
     updateEmployee: supervisorProcedure
@@ -221,7 +343,13 @@ export const appRouter = router({
 
     getEmployeeLines: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => await getEmployeeRegistrations(input.employeeId)),
+      .query(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await getEmployeeRegistrations(input.employeeId);
+      }),
 
     createCheckIn: protectedProcedure
       .input(
@@ -233,7 +361,13 @@ export const appRouter = router({
           notes: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => await createCheckIn(input)),
+      .mutation(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await createCheckIn(input);
+      }),
 
     checkout: protectedProcedure
       .input(
@@ -251,7 +385,13 @@ export const appRouter = router({
 
     getLatestCheckIn: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => await getLatestCheckIn(input.employeeId)),
+      .query(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await getLatestCheckIn(input.employeeId);
+      }),
 
     // Float Requests — agent submits, supervisor/admin approves
     requestFloat: protectedProcedure
@@ -263,11 +403,23 @@ export const appRouter = router({
           workerNotes: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => await createFloatRequest(input)),
+      .mutation(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await createFloatRequest(input);
+      }),
 
     myFloatRequests: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => await getEmployeeFloatRequests(input.employeeId)),
+      .query(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await getEmployeeFloatRequests(input.employeeId);
+      }),
 
     listFloatRequests: supervisorProcedure
       .input(z.object({ status: z.string().optional() }))
@@ -310,11 +462,23 @@ export const appRouter = router({
           updateReason: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => await createBalanceSnapshot(input)),
+      .mutation(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await createBalanceSnapshot(input);
+      }),
 
     getLatestSnapshot: protectedProcedure
       .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => await getLatestBalanceSnapshot(input.employeeId)),
+      .query(async ({ input, ctx }) => {
+        const employee = await getEmployeeByEmail(ctx.user.email!);
+        if (employee?.id !== input.employeeId && ctx.user.role === "agent") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await getLatestBalanceSnapshot(input.employeeId);
+      }),
   }),
 
   // ── LIQUIDITY ──────────────────────────────────────────────────────
@@ -367,7 +531,7 @@ export const appRouter = router({
         await getTransactionsByDateRange(input.startDate, input.endDate)
       ),
 
-    flagged: supervisorProcedure
+    flaggedTransactions: supervisorProcedure
       .input(z.object({ limit: z.number().default(50) }))
       .query(async () => await getFlaggedTransactions("flagged")),
 

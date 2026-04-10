@@ -25,8 +25,10 @@ import {
   XCircle,
   ExternalLink,
   ChevronRight,
+  PlusCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import PageHeader from "@/components/PageHeader";
 
 export function ProviderConfigContent() {
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -42,7 +44,8 @@ export function ProviderConfigContent() {
   });
 
   const handleSave = () => {
-    console.log("Saving provider config:", formData);
+    // TODO: Implement persistent provider configuration mutation
+    console.log("Saving provider:", formData);
     setShowForm(false);
     setFormData({
       name: "",
@@ -68,176 +71,155 @@ export function ProviderConfigContent() {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "mobile_money":
-        return "bg-blue-500/10 text-blue-600";
+        return "bg-blue-50 text-blue-600 border-blue-100";
       case "bank":
-        return "bg-emerald-500/10 text-emerald-600";
+        return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "fintech":
-        return "bg-indigo-500/10 text-indigo-600";
+        return "bg-purple-50 text-purple-600 border-purple-100";
       default:
-        return "bg-slate-500/10 text-slate-600";
+        return "bg-gray-50 text-gray-600 border-gray-100";
     }
   };
 
   return (
-    <div className="space-y-10 animate-fade-in">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-slate-200 dark:border-slate-800">
-        <div className="space-y-1.5">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Gateway Management
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">
-            Configure and maintain security credentials for all integrated
-            providers.
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          className="h-11 rounded-xl premium-gradient text-white px-6 font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Provision New Gateway
-        </Button>
-      </div>
+    <div className="space-y-8 pb-16">
+      <PageHeader 
+        title="Payment Providers"
+        subtitle="Manage and configure your mobile money and bank integrations."
+        category="Admin"
+        actions={
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            className="h-9 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Add Provider
+          </Button>
+        }
+      />
 
       {showForm && (
-        <Card className="border-none shadow-2xl dark:bg-slate-900/80 overflow-hidden ring-1 ring-primary/20 animate-fade-in">
-          <div className="h-2 premium-gradient w-full" />
-          <CardHeader className="pb-8">
-            <CardTitle className="text-2xl">Configuration Portal</CardTitle>
+        <Card className="border border-gray-200 dark:border-slate-800 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+          <CardHeader className="pb-6 border-b border-gray-50 dark:border-slate-800/50">
+            <CardTitle className="text-lg">Provider Configuration</CardTitle>
             <CardDescription>
-              Establishing a secure link to a third-party banking API
+              Configure the API connection for a new payment gateway.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-8 max-w-3xl">
+          <CardContent className="p-6 space-y-6 max-w-3xl">
             <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-                  Friendly Name
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Provider Name
                 </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={e =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                  placeholder="e.g., EcoCash Production"
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
+                  placeholder="e.g., EcoCash Zimbabwe"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-                  Gateway Classification
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Provider Type
                 </label>
                 <select
                   value={formData.type}
-                  onChange={e =>
-                    setFormData({ ...formData, type: e.target.value as any })
-                  }
-                  className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  onChange={e => setFormData({ ...formData, type: e.target.value as any })}
+                  className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
                 >
-                  <option value="mobile_money">Mobile Money Network</option>
+                  <option value="mobile_money">Mobile Money</option>
                   <option value="bank">Commercial Bank</option>
-                  <option value="fintech">Fintech Aggregator</option>
-                  <option value="aggregator">Universal Switch</option>
+                  <option value="fintech">Fintech Gateway</option>
                 </select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                <Link2 className="w-3 h-3" /> REST API Endpoint
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5" /> API Endpoint
               </label>
               <input
                 type="url"
                 value={formData.apiEndpoint}
-                onChange={e =>
-                  setFormData({ ...formData, apiEndpoint: e.target.value })
-                }
-                className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm uppercase"
-                placeholder="HTTPS://API.PROVIDER.COM/V1"
+                onChange={e => setFormData({ ...formData, apiEndpoint: e.target.value })}
+                className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono"
+                placeholder="https://api.provider.com/v1"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
-                <ShieldCheck className="w-3 h-3" /> Secure Webhook Callback
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" /> Webhook URL
               </label>
               <input
                 type="url"
                 value={formData.webhookUrl}
-                onChange={e =>
-                  setFormData({ ...formData, webhookUrl: e.target.value })
-                }
-                className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm opacity-60"
-                placeholder="https://your-domain.com/callbacks/v1"
+                onChange={e => setFormData({ ...formData, webhookUrl: e.target.value })}
+                className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono"
+                placeholder="https://your-domain.com/hooks/provider"
               />
             </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-slate-800">
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={() => setShowForm(false)}
-                className="h-11 px-8 rounded-xl font-bold uppercase tracking-widest text-xs"
+                className="h-9 px-6 rounded-lg text-sm font-medium"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
-                className="h-11 px-8 rounded-xl premium-gradient text-white font-bold shadow-lg shadow-primary/20"
+                className="h-9 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm"
               >
-                Save Configuration
+                Save Provider
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Providers Registry */}
+      {/* Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {providers.data?.map(provider => (
           <Card
             key={provider.id}
-            className="hover-lift border-none shadow-sm dark:bg-slate-900/50 group overflow-hidden"
+            className="border border-gray-200 dark:border-slate-800 shadow-sm hover:border-blue-300 transition-colors group overflow-hidden"
           >
-            <CardContent className="pt-8 relative">
-              <div className="absolute top-0 right-0 p-4">
+            <CardContent className="pt-6 relative">
+              <div className="absolute top-4 right-4">
                 <Badge
                   variant="outline"
-                  className={`border-none ${provider.isActive ? "text-emerald-500" : "text-slate-300"} font-bold text-[10px] uppercase flex items-center gap-1.5`}
+                  className={`border-none ${provider.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"} font-medium text-[10px] px-2 py-0.5`}
                 >
-                  <CircleDot
-                    className={`w-2 h-2 ${provider.isActive ? "animate-pulse bg-emerald-500" : "bg-slate-300"} rounded-full`}
-                  />
-                  {provider.isActive ? "Live" : "Inactive"}
+                  {provider.isActive ? "Active" : "Disabled"}
                 </Badge>
               </div>
 
-              <div className="flex flex-col items-start gap-5">
-                <div
-                  className={`p-4 rounded-2xl ${getCategoryColor(provider.category)}`}
-                >
+              <div className="flex flex-col items-start gap-4">
+                <div className={`p-3 rounded-lg border ${getCategoryColor(provider.category)}`}>
                   {getCategoryIcon(provider.category)}
                 </div>
 
-                <div className="space-y-1.5 w-full">
-                  <h3 className="font-bold text-xl text-slate-800 dark:text-white flex items-center justify-between group-hover:text-primary transition-colors">
+                <div className="space-y-1 w-full">
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center justify-between group-hover:text-blue-600 transition-colors">
                     {provider.name}
-                    <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                    <ChevronRight className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all" />
                   </h3>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-tight">
                     {provider.category.replace("_", " ")}
                   </p>
                 </div>
 
                 <div className="w-full space-y-4 pt-2">
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1.5">
-                      Primary API Cluster
+                  <div className="p-3 bg-gray-50 dark:bg-slate-800/40 rounded-lg border border-gray-100 dark:border-slate-800">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-tight mb-1">
+                      Endpoint
                     </p>
-                    <div className="flex items-center justify-between text-xs font-mono text-slate-600 dark:text-slate-300">
+                    <div className="flex items-center justify-between text-xs font-mono text-gray-500">
                       <span className="truncate">
-                        {(provider as any).apiEndpoint || "CLUSTER_01.AWS.PROD"}
+                        {(provider as any).apiEndpoint || "Not configured"}
                       </span>
                       <ExternalLink className="w-3 h-3 shrink-0 ml-2 opacity-40" />
                     </div>
@@ -247,15 +229,15 @@ export function ProviderConfigContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 h-9 rounded-lg border-slate-200 font-bold text-[10px] uppercase"
+                      className="flex-1 h-8 rounded-md text-xs font-medium border-gray-200"
                       onClick={() => setEditingId(provider.id)}
                     >
-                      <Settings className="w-3 h-3 mr-2" /> Settings
+                      <Settings className="w-3.5 h-3.5 mr-1.5" /> Config
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="h-9 w-9 rounded-lg border-slate-200 text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                      size="icon"
+                      className="h-8 w-8 rounded-md border-gray-200 text-red-500 hover:bg-red-50 hover:text-red-700"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -266,45 +248,34 @@ export function ProviderConfigContent() {
           </Card>
         ))}
 
-        {/* New Provider Placeholder */}
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="group flex flex-col items-center justify-center gap-4 p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all duration-500 min-h-[300px]"
+            className="group flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-all min-h-[260px]"
           >
-            <div className="h-14 w-14 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all">
-              <Plus className="w-6 h-6 text-slate-400 group-hover:text-primary transition-all" />
+            <div className="h-12 w-12 rounded-lg bg-gray-50 dark:bg-slate-900 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all text-gray-400">
+              <PlusCircle className="w-6 h-6" />
             </div>
             <div className="text-center">
-              <p className="font-bold text-slate-800 dark:text-white">
-                Provision New Gateway
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Connect another regional banking node
-              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">Add New Provider</p>
+              <p className="text-xs text-gray-400 mt-1">Connect a mobile money gateway</p>
             </div>
           </button>
         )}
       </div>
 
-      {/* Empty State Management */}
       {providers.data?.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-32 text-center bg-white dark:bg-slate-900/50 rounded-3xl border-2 border-slate-50 dark:border-slate-800">
-          <div className="h-20 w-20 bg-slate-100 dark:bg-slate-800 rounded-3xl flex items-center justify-center mb-6 shadow-sm">
-            <Smartphone className="h-10 w-10 text-slate-400" />
-          </div>
-          <h3 className="text-2xl font-bold text-slate-800 dark:text-white">
-            Registry Empty
-          </h3>
-          <p className="text-sm text-slate-500 max-w-sm mt-2 font-medium">
-            No operational gateways detected. Start by provisioning your first
-            mobile money or bank integration.
+        <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-xl">
+          <Smartphone className="h-12 w-12 text-gray-200 mb-4" />
+          <h3 className="text-xl font-bold text-gray-900">No Providers Found</h3>
+          <p className="text-sm text-gray-500 max-w-xs mt-2">
+            Start by adding your first mobile money or bank integration.
           </p>
           <Button
-            className="mt-8 h-12 px-8 rounded-xl premium-gradient text-white font-bold shadow-xl shadow-primary/20"
+            className="mt-6 h-10 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
             onClick={() => setShowForm(true)}
           >
-            Build Integration Cluster
+            Add First Provider
           </Button>
         </div>
       )}

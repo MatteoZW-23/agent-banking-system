@@ -78,59 +78,59 @@ function FloatRequestAction({
   const provider = providersQuery.data?.find(p => p.id === request.providerId);
 
   return (
-    <div className="p-6 bg-slate-50/50 border border-slate-100/50 rounded-[2.5rem] space-y-6 hover:bg-white hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 transition-all group">
+    <div className="p-5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl space-y-4 hover:border-blue-300 transition-colors">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black shadow-inner border border-primary/5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-semibold text-sm">
             {employee?.name?.[0] || "A"}
           </div>
-          <div className="flex flex-col">
-            <span className="text-[13px] font-black text-slate-900 uppercase tracking-tight font-outfit">
+          <div>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white block">
               {employee?.name}
             </span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 italic">
-              Terminal: {provider?.name}
+            <span className="text-xs text-gray-500">
+              {provider?.name}
             </span>
           </div>
         </div>
         <div className="text-right">
-           <span className="text-2xl font-black text-slate-900 font-outfit italic tracking-tighter">
+           <span className="text-xl font-bold text-gray-900 dark:text-white">
              ${request.amount}
            </span>
-           <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">Pending Sync</p>
+           <p className="text-xs text-blue-600 font-medium mt-0.5">Pending</p>
         </div>
       </div>
 
       {request.workerNotes && (
-        <p className="text-[11px] text-slate-500 italic bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+        <p className="text-xs text-gray-500 italic bg-gray-50 dark:bg-slate-900 p-2 rounded-md border border-gray-100 dark:border-slate-700">
           "{request.workerNotes}"
         </p>
       )}
 
-      <div className="space-y-3 pt-2">
+      <div className="space-y-2.5">
         <input
           placeholder="Transfer Reference (Bank/MoMo Auth ID)"
           value={ref}
           onChange={e => setRef(e.target.value)}
-          className="w-full h-10 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/10 transition-all outline-none"
+          className="w-full h-9 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md text-xs font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
         />
         <div className="flex gap-2">
           <Button
             onClick={() => handleAction("transferred")}
             disabled={isProcessing}
-            className="flex-1 h-10 rounded-xl premium-gradient text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/10"
+            className="flex-1 h-9 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
           >
             {isProcessing ? (
               <RefreshCw className="h-3 w-3 animate-spin" />
             ) : (
-              "Send Money"
+              "Approve & Send"
             )}
           </Button>
           <Button
             onClick={() => handleAction("declined")}
             disabled={isProcessing}
             variant="outline"
-            className="h-10 px-4 rounded-xl border-slate-100 dark:border-slate-800 text-rose-500 hover:bg-rose-50 transition-colors"
+            className="h-9 px-3 rounded-md border-gray-200 text-red-500 hover:bg-red-50"
           >
             <XCircle className="h-4 w-4" />
           </Button>
@@ -147,7 +147,6 @@ export default function Home() {
   const [selectedDate] = useState(new Date());
   const [_, setLocation] = useLocation();
 
-  // Fetch dashboard data
   const providersQuery = trpc.providers.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -164,7 +163,7 @@ export default function Home() {
   );
 
   const floatRequestsQuery = trpc.nodes.listFloatRequests.useQuery(
-    {}, // Fetch all (filter locally or leave as is if status is optional)
+    {},
     { enabled: isAuthenticated, refetchInterval: 5000 }
   );
 
@@ -172,7 +171,7 @@ export default function Home() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
-          <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+          <RefreshCw className="h-6 w-6 text-blue-600 animate-spin" />
         </div>
       </DashboardLayout>
     );
@@ -184,79 +183,76 @@ export default function Home() {
     {
       title: "Total Float Balance",
       value: `$${floatQuery.data ? parseFloat(floatQuery.data).toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00"}`,
-      description: "Aggregated across all provider lines",
+      description: "All provider accounts combined",
       icon: DollarSign,
       trend: "+2.5%",
       trendUp: true,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50 dark:bg-emerald-900/20",
     },
     {
-      title: "Active Service Providers",
+      title: "Active Providers",
       value: providersQuery.data?.length || 0,
-      description: "Live synchronisation across networks",
+      description: "Live payment gateways",
       icon: Zap,
       trend: "Stable",
       trendUp: true,
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
+      color: "text-amber-600",
+      bg: "bg-amber-50 dark:bg-amber-900/20",
     },
     {
-      title: "Daily Transaction Volume",
+      title: "Today's Transactions",
       value: dailySummaryQuery.data?.transactionCount || 0,
-      description: `$${dailySummaryQuery.data?.totalAmount.toLocaleString() || "0.00"} processed today`,
+      description: `$${dailySummaryQuery.data?.totalAmount.toLocaleString() || "0.00"} processed`,
       icon: TrendingUp,
       trend: "+12%",
       trendUp: true,
-      color: "text-primary",
-      bg: "bg-primary/10",
+      color: "text-blue-600",
+      bg: "bg-blue-50 dark:bg-blue-900/20",
     },
     {
-      title: "Float Top-up Requests",
+      title: "Pending Requests",
       value: (floatRequestsQuery.data?.filter((r: any) => r.status === "pending" || r.status === "verified") || []).length,
-      description: "Aggregated liquidity queue",
+      description: "Float top-up queue",
       icon: Banknote,
       trend: "+3",
       trendUp: true,
-      color: "text-accent",
-      bg: "bg-accent/10",
+      color: "text-orange-600",
+      bg: "bg-orange-50 dark:bg-orange-900/20",
     },
   ];
 
   return (
     <DashboardLayout>
-      <div className="space-y-12 animate-fade-in pb-20">
+      <div className="space-y-8 pb-16">
         <PageHeader
-          title="Business Overview"
-          subtitle={`Welcome, ${user?.name || "Administrator"}. Your agent network is currently active.`}
+          title="Dashboard"
+          subtitle={`Welcome back, ${user?.name || "Administrator"}. Here's your business overview.`}
           actions={
             <Button 
                onClick={() => {
                  providersQuery.refetch();
                  floatQuery.refetch();
                  dailySummaryQuery.refetch();
-                 toast.success("System Updated");
+                 toast.success("Data refreshed");
                }}
-               className="h-12 rounded-[1.25rem] premium-gradient text-white px-8 font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all"
+               className="h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-5 font-medium text-sm"
             >
-              <RefreshCw className="mr-3 h-4 w-4" /> Update Data
+              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
             </Button>
           }
         />
 
-        {/* Global Performance Metrics */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* KPI cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, i) => (
-            <Card
-              key={i}
-              className="hover-lift border-none shadow-sm dark:bg-slate-900/50"
-            >
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <div className={`p-2.5 rounded-xl ${stat.bg}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+            <Card key={i} className="border border-gray-200 dark:border-slate-700 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className={`p-2 rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
                 </div>
                 <div
-                  className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${stat.trendUp ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" : "text-rose-600 bg-rose-50 dark:bg-rose-500/10"}`}
+                  className={`flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${stat.trendUp ? "text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20" : "text-red-700 bg-red-50"}`}
                 >
                   {stat.trendUp ? (
                     <ArrowUpRight className="h-3 w-3 mr-0.5" />
@@ -267,38 +263,50 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-black tracking-tight text-slate-900 dark:text-white font-outfit">
+                <div className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                   {stat.value}
                 </div>
-                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 mt-1.5 uppercase tracking-widest">
+                <p className="text-xs font-medium text-gray-500 mt-1">
                   {stat.title}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-3 truncate font-medium">
+                <p className="text-xs text-gray-400 mt-2">
                   {stat.description}
                 </p>
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                  <div>
+                    <p className="text-xs text-gray-400">System Status</p>
+                    <p className="text-sm font-semibold text-emerald-600">Active</p>
+                  </div>
+                  <div className="h-8 w-px bg-gray-200 dark:bg-slate-600" />
+                  <div>
+                    <p className="text-xs text-gray-400">Network Nodes</p>
+                    <p className="text-sm font-semibold text-blue-600">Sync</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-4 space-y-6">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xl font-black font-outfit uppercase tracking-tight">
-                Dispensation Queue
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Float requests queue */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Float Requests
               </h3>
-              <Badge className="bg-rose-500 text-white border-none font-black text-[10px] rounded-lg">
-                ACTION REQUIRED
+              <Badge className="bg-red-100 text-red-700 border-none font-medium text-xs">
+                Action Required
               </Badge>
             </div>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
               {floatRequestsQuery.data
                 ?.filter((r: any) => r.status === "pending" || r.status === "verified")
                 .map((request: any) => (
                   <div key={request.id} className="relative">
                     {request.status === "verified" && (
-                      <div className="absolute -top-3 -right-3 z-20 px-4 py-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-2xl animate-bounce flex items-center gap-2">
-                        <ShieldCheckIcon className="h-3 w-3" /> Manager Verified
+                      <div className="absolute -top-2 -right-2 z-20 px-2.5 py-1 bg-emerald-500 text-white text-[10px] font-semibold rounded-full shadow-md flex items-center gap-1">
+                        <ShieldCheckIcon className="h-3 w-3" /> Verified
                       </div>
                     )}
                     <FloatRequestAction
@@ -311,158 +319,142 @@ export default function Home() {
                 floatRequestsQuery.data.filter(
                   (r: any) => r.status === "pending" || r.status === "verified"
                 ).length === 0) && (
-                <div className="p-10 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] flex flex-col items-center justify-center text-center">
-                  <CheckCircle className="h-10 w-10 text-emerald-500 mb-4 opacity-20" />
-                  <p className="text-sm font-bold text-slate-300">
-                    No liquidity requests pending authorization.
+                <div className="p-8 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center text-center">
+                  <CheckCircle className="h-8 w-8 text-gray-300 mb-3" />
+                  <p className="text-sm text-gray-400">
+                    No pending requests.
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Operation Telemetry & Alerts */}
-          <Card className="lg:col-span-5 border-none shadow-sm dark:bg-slate-900/50 flex flex-col">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-outfit uppercase font-black">
-                System Activity
-              </CardTitle>
-              <CardDescription className="font-inter">
-                Security logs and transaction alerts
-              </CardDescription>
+          {/* Recent alerts */}
+          <Card className="lg:col-span-5 border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <CardDescription>Security logs and alerts</CardDescription>
             </CardHeader>
             <CardContent className="flex-1">
               {alertsQuery.isLoading ? (
                 <div className="flex items-center justify-center h-40">
-                  <RefreshCw className="h-6 w-6 text-primary animate-spin" />
+                  <RefreshCw className="h-5 w-5 text-blue-600 animate-spin" />
                 </div>
               ) : alertsQuery.data && alertsQuery.data.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {alertsQuery.data.map((alert: any) => (
                     <div
                       key={alert.id}
-                      className="group flex items-start justify-between p-4 bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-primary/30 transition-all duration-300"
+                      className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-lg"
                     >
-                      <div className="flex gap-4">
-                        <div
-                          className={`mt-1 h-2 w-2 rounded-full ring-4 ${
-                            alert.severity === "critical"
-                              ? "bg-rose-500 ring-rose-500/20"
-                              : alert.severity === "high"
-                                ? "bg-orange-500 ring-orange-500/20"
-                                : "bg-amber-500 ring-amber-500/20"
-                          }`}
-                        />
-                        <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                            {alert.title}
-                          </p>
-                          <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                            {alert.message}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-2">
-                            {new Date(alert.triggeredAt).toLocaleTimeString()} •
-                            SYSTEM AUTO-GEN
-                          </p>
-                        </div>
+                      <div
+                        className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
+                          alert.severity === "critical"
+                            ? "bg-red-500"
+                            : alert.severity === "high"
+                              ? "bg-orange-500"
+                              : "bg-amber-500"
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
+                          {alert.title}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                          {alert.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1.5">
+                          {new Date(alert.triggeredAt).toLocaleTimeString()}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <ShieldCheckIcon className="h-12 w-12 text-slate-200 dark:text-slate-800 mb-4" />
-                  <p className="text-sm font-medium text-slate-500">
-                    System is clean. No active alerts.
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <ShieldCheckIcon className="h-10 w-10 text-gray-200 dark:text-slate-700 mb-3" />
+                  <p className="text-sm text-gray-400">
+                    No active alerts.
                   </p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Intelligent Quick Control */}
-          <div className="lg:col-span-3 space-y-6">
-            <h3 className="text-lg font-black font-outfit uppercase tracking-widest pl-2">
-              Quick Control
+          {/* Quick actions */}
+          <div className="lg:col-span-3 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white pl-1">
+              Quick Actions
             </h3>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2">
               {[
                 {
-                  label: "Run Full Reconcile",
+                  label: "Reconciliation",
                   icon: RefreshCw,
-                  color: "text-primary",
-                  bg: "bg-primary/10",
+                  color: "text-blue-600",
+                  bg: "bg-blue-50 dark:bg-blue-900/20",
                   path: "/reconciliation",
                 },
                 {
-                  label: "Agent Network",
+                  label: "Staff Directory",
                   icon: Zap,
-                  color: "text-primary",
-                  bg: "bg-primary/10",
+                  color: "text-blue-600",
+                  bg: "bg-blue-50 dark:bg-blue-900/20",
                   path: "/nodes",
                 },
                 {
-                  label: "Audit Total Capital",
+                  label: "Float Management",
                   icon: DollarSign,
-                  color: "text-accent",
-                  bg: "bg-accent/10",
+                  color: "text-orange-600",
+                  bg: "bg-orange-50 dark:bg-orange-900/20",
                   path: "/floats",
                 },
                 {
-                  label: "Provider Health",
+                  label: "Provider Status",
                   icon: ShieldCheck,
-                  color: "text-emerald-500",
-                  bg: "bg-emerald-500/10",
+                  color: "text-emerald-600",
+                  bg: "bg-emerald-50 dark:bg-emerald-900/20",
                   path: "/provider-config",
                 },
               ].map((action, i) => (
                 <button
                   key={i}
                   onClick={() => setLocation(action.path)}
-                  className="flex items-center justify-between w-full p-5 rounded-3xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-primary/40 hover:shadow-xl transition-all active:scale-[0.98] group shadow-sm"
+                  className="flex items-center justify-between w-full p-3.5 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-blue-300 transition-colors group"
                 >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`p-2.5 rounded-2xl ${action.bg} dark:bg-slate-800 border border-slate-100 dark:border-slate-800`}
-                    >
-                      <action.icon className={`h-5 w-5 ${action.color}`} />
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${action.bg}`}>
+                      <action.icon className={`h-4 w-4 ${action.color}`} />
                     </div>
-                    <span className="text-xs font-black text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors uppercase tracking-widest">
+                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300 group-hover:text-blue-600 transition-colors">
                       {action.label}
                     </span>
                   </div>
-                  <ArrowUpRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                  <ArrowUpRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
                 </button>
               ))}
             </div>
 
-            {/* Liquidity Overview Mini-Card */}
-            <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 p-8 opacity-5">
-                <DollarSign className="h-32 w-32" />
-              </div>
-              <div className="relative z-10 space-y-4">
-                <h4 className="text-[10px] font-black uppercase text-emerald-500 tracking-[0.2em] italic">
-                  Network Money Hub
+            {/* Summary card */}
+            <div className="p-6 rounded-xl bg-gray-900 text-white">
+              <div className="space-y-3">
+                <h4 className="text-xs font-medium text-emerald-400 uppercase tracking-wide">
+                  Network Summary
                 </h4>
-                <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  Money is moving across your agent network. Approve money requests using the panel above.
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Float is moving across your agent network. Approve pending requests on the left panel.
                 </p>
-                <div className="flex items-center gap-4 pt-4">
-                  <div className="flex flex-col">
-                    <span className="text-xl font-black font-outfit">
-                      $4.2K
+                <div className="flex items-center gap-4 pt-2">
+                  <div>
+                    <span className="text-lg font-bold">
+                       ${floatRequestsQuery.data?.filter((r: any) => r.status === "pending").reduce((sum: number, r: any) => sum + parseFloat(r.amount), 0).toFixed(2) || "0.00"}
                     </span>
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
-                      Pending
-                    </span>
+                    <span className="text-xs text-gray-500 block mt-0.5">Pending</span>
                   </div>
-                  <div className="h-8 w-px bg-white/10" />
-                  <div className="flex flex-col">
-                    <span className="text-xl font-black font-outfit">12</span>
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
-                      Hubs
-                    </span>
+                  <div className="h-6 w-px bg-gray-700" />
+                  <div>
+                    <span className="text-lg font-bold">{trpc.nodes.listBranches.useQuery().data?.length || 0}</span>
+                    <span className="text-xs text-gray-500 block mt-0.5">Branches</span>
                   </div>
                 </div>
               </div>

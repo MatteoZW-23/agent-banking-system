@@ -43,7 +43,7 @@ export const supervisorProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "supervisor")) {
+    if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "supervisor" && ctx.user.role !== "manager")) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Management Access Required" });
     }
 

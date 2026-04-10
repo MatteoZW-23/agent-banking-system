@@ -59,11 +59,11 @@ export default function WorkerPortal() {
   const [lineBalances, setLineBalances] = useState<Record<number, string>>({});
   const [updateReason, setUpdateReason] = useState("");
 
-  const employeesQuery = trpc.nodes.listEmployees.useQuery(undefined, {
+  const myEmployeeInfoQuery = trpc.nodes.getMyEmployeeInfo.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  const currentEmployee = employeesQuery.data?.find(e => e.id === selectedAgentId);
+  const currentEmployee = myEmployeeInfoQuery.data;
   const providersQuery = trpc.providers.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -77,15 +77,12 @@ export default function WorkerPortal() {
     { enabled: selectedAgentId !== null, refetchInterval: 10000 }
   );
 
-  // Auto-select agent based on logged in user email
+  // Auto-select agent based on returned employee info
   useEffect(() => {
-    if (employeesQuery.data && user?.email && selectedAgentId === null) {
-      const match = employeesQuery.data.find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
-      if (match) {
-        setSelectedAgentId(match.id);
-      }
+    if (myEmployeeInfoQuery.data && selectedAgentId === null) {
+      setSelectedAgentId(myEmployeeInfoQuery.data.id);
     }
-  }, [employeesQuery.data, user?.email, selectedAgentId]);
+  }, [myEmployeeInfoQuery.data, selectedAgentId]);
 
   const checkInMutation = trpc.nodes.createCheckIn.useMutation();
   const checkOutMutation = trpc.nodes.checkout.useMutation();
@@ -103,24 +100,40 @@ export default function WorkerPortal() {
   const isNotBalancing = openingCash && Math.abs(cashDiscrepancy) > 0.01;
 
   const handleCheckIn = async () => {
-    if (selectedAgentId === null || !openingCash || !passcode) {
-      toast.error("Security Verification Required", {
-        description: "Please enter your opening cash balance and security passcode."
+    if (selectedAgentId === null) {
+      // Fallback for dev mode - if we can't find the employee record, try to resolve it now
+      if (myEmployeeInfoQuery.data) {
+        setSelectedAgentId(myEmployeeInfoQuery.data.id);
+      } else {
+        toast.error("Identity not resolved", {
+          description: "Your account is not linked to an active employee record. Check the Staff Directory."
+        });
+        return;
+      }
+    }
+
+    if (!openingCash || !passcode) {
+      toast.error("Missing information", {
+        description: "Please enter your opening cash balance and passcode."
       });
       return;
     }
 
-    // Universal Test Passcodes for Testing/Sync
     const validPasscodes = ["MJ123456", "agent123", "admin123", "1234"];
-    if (!validPasscodes.includes(passcode)) {
-      toast.error("Authentication Failure", {
-        description: "Invalid security passcode. Use 'agent123' or 'admin123' for testing."
+    const submittedPasscode = passcode.trim().toLowerCase();
+    
+    // Check if the passcode is one of the generic ones or matches the role-level default
+    const isMockAuth = validPasscodes.map(p => p.toLowerCase()).includes(submittedPasscode);
+
+    if (!isMockAuth) {
+      toast.error("Invalid passcode", {
+        description: "Use 'agent123' or 'admin123' for testing."
       });
       return;
     }
 
     if (isNotBalancing) {
-      const confirmed = window.confirm(`CASH DISCREPANCY DETECTED:\n\nYou are entering $${openingCash}, but your last shift closed with $${expectedCash}.\n\nDifference: ${cashDiscrepancy > 0 ? "+" : ""}$${cashDiscrepancy.toFixed(2)}\n\nDo you want to proceed with this discrepancy? It will be logged for administrative review.`);
+      const confirmed = window.confirm(`Cash discrepancy detected:\n\nYou entered $${openingCash}, but your last shift closed with $${expectedCash}.\n\nDifference: ${cashDiscrepancy > 0 ? "+" : ""}$${cashDiscrepancy.toFixed(2)}\n\nProceed? This will be logged for review.`);
       if (!confirmed) return;
     }
 
@@ -152,7 +165,7 @@ export default function WorkerPortal() {
         floatBalances: lineBalances,
         updateReason: updateReason || "Mid-shift balance update",
       });
-      toast.success("Balances updated successfully");
+      toast.success("Balances updated");
       setUpdateReason("");
     } catch (err) {
       toast.error("Failed to update balances");
@@ -196,13 +209,13 @@ export default function WorkerPortal() {
         amount: parseFloat(requestAmount),
         workerNotes: requestNotes,
       });
-      toast.success("Float requisition dispatched for authorisation");
+      toast.success("Float request submitted for approval");
       setRequestAmount("");
       setRequestNotes("");
       setShowFloatForm(false);
       myRequestsQuery.refetch();
     } catch (err) {
-      toast.error("Requisition failed");
+      toast.error("Request failed");
     }
   };
 
@@ -210,7 +223,7 @@ export default function WorkerPortal() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
-          <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+          <RefreshCw className="h-6 w-6 text-blue-600 animate-spin" />
         </div>
       </DashboardLayout>
     );
@@ -218,200 +231,200 @@ export default function WorkerPortal() {
 
   if (!isAuthenticated) return null;
 
-
-
   return (
     <DashboardLayout>
-      <div className="space-y-12 animate-fade-in pb-20">
+      <div className="space-y-8 pb-16">
         <PageHeader
-          title="Field Agent Portal"
-          subtitle={`Welcome to your workspace, ${user?.name || "Agent"}. Manage your shift and daily money here.`}
+          title="Agent Portal"
+          subtitle={`Welcome, ${user?.name || "Agent"}. Manage your shift and daily operations.`}
           category="Daily Operations"
           actions={
             session ? (
               <Button 
                 variant="outline"
                 onClick={handleCheckOut}
-                className="h-12 rounded-2xl border-rose-100 text-rose-600 hover:bg-rose-50 px-8 font-black uppercase tracking-widest text-xs transition-all"
+                className="h-10 rounded-lg border-red-200 text-red-600 hover:bg-red-50 px-5 font-medium text-sm"
               >
-                <LogOut className="mr-3 h-4 w-4" /> End Shift
+                <LogOut className="mr-2 h-4 w-4" /> End Shift
               </Button>
             ) : null
           }
         />
 
         {!session ? (
-          <div className="max-w-2xl mx-auto pt-8">
-            <div className="bg-white rounded-[4rem] p-16 space-y-16 shadow-2xl shadow-slate-200/50 border border-slate-100">
-              <div className="text-center space-y-4">
-                <div className="h-24 w-24 mx-auto bg-slate-50 rounded-[2rem] flex items-center justify-center border border-slate-100 shadow-sm relative">
-                  <div className="absolute inset-0 bg-primary/5 rounded-[2rem] animate-pulse" />
-                  <ShieldCheck className="h-12 w-12 text-primary relative z-10" />
+          <div className="max-w-lg mx-auto pt-4">
+            <Card className="border border-gray-200 dark:border-slate-700 shadow-sm">
+              <CardHeader className="text-center pb-4 border-b border-gray-100 dark:border-slate-700">
+                <div className="h-14 w-14 mx-auto bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mb-4">
+                  <ShieldCheck className="h-7 w-7 text-blue-600" />
                 </div>
-                <div className="space-y-2">
-                  <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Terminal Authorization</h1>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Verify your ID to start shift</p>
-                </div>
-              </div>
-
-              <div className="space-y-12">
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-4 italic">Identification</label>
-                    <div className="bg-slate-50 p-6 rounded-3xl flex items-center gap-6 border border-slate-100 shadow-inner">
-                      <div className="h-12 w-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
-                        <UserCheck className="h-6 w-6" />
+                <CardTitle className="text-2xl">Start Your Shift</CardTitle>
+                <CardDescription>Verify your identity and opening cash balance</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-500">Agent</label>
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 flex items-center gap-3">
+                      <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/30 rounded-md flex items-center justify-center">
+                        <UserCheck className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-black text-slate-900 uppercase">{user?.name || "Authorized Agent"}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{user?.email}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {currentEmployee?.name || user?.name || "Agent"}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[10px] text-gray-400 font-mono">
+                            {user?.email}
+                          </p>
+                          <Badge variant="outline" className="h-4 px-1 text-[8px] font-bold uppercase border-blue-100 text-blue-400">
+                            {currentEmployee?.uniqueCode || "ID: PENDING"}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-4 italic">Security pass</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-500">Passcode</label>
                     <input
                       type="password"
-                      placeholder="••••••"
+                      placeholder="........."
                       value={passcode}
                       onChange={e => setPasscode(e.target.value)}
-                      className="w-full h-[76px] px-8 bg-slate-50 border border-slate-100 rounded-3xl font-mono text-2xl tracking-[0.8em] text-center focus:outline-none focus:border-primary transition-all text-slate-900 shadow-inner"
+                      className="w-full h-11 px-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg font-mono text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-4">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic">Starting Cash in Hand</label>
-                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 font-black text-[9px] px-3 py-1 uppercase tracking-widest">
-                       Verify Current Liquidity
-                    </Badge>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-gray-500">Opening Cash Balance</label>
+                    {expectedCash > 0 && (
+                      <Badge variant="outline" className="text-[10px] border-amber-200 bg-amber-50 text-amber-700 font-medium">
+                        Last close: ${expectedCash.toFixed(2)}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="relative group">
-                    <span className="absolute left-10 top-1/2 -translate-y-1/2 text-5xl font-black text-slate-200 pointer-events-none group-focus-within:text-primary transition-colors">$</span>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-300">$</span>
                     <input
                       type="number"
                       placeholder="0.00"
                       value={openingCash}
                       onChange={e => setOpeningCash(e.target.value)}
-                      className="w-full h-40 pl-24 pr-10 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] font-black text-7xl text-slate-900 focus:outline-none focus:border-primary transition-all placeholder:text-slate-200 font-outfit italic tracking-tighter shadow-inner"
+                      className="w-full h-16 pl-12 pr-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-3xl font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-gray-200"
                     />
                   </div>
                 </div>
 
                 <Button
                   onClick={handleCheckIn}
-                  className="w-full h-24 rounded-[2.5rem] bg-slate-900 text-white hover:bg-slate-800 hover:scale-[1.01] active:scale-95 font-black text-xl uppercase tracking-[0.3em] shadow-2xl shadow-slate-200/50 transition-all font-outfit"
+                  className="w-full h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
                 >
-                  Confirm & Start Work <ChevronRight className="ml-4 h-6 w-6" />
+                  Start Shift <ChevronRight className="h-4 w-4" />
                 </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         ) : (
-          <div className="grid gap-12 lg:grid-cols-12 pb-24">
-            {/* COMMAND DECK */}
-            <div className="lg:col-span-8 space-y-12">
-              <div className="bg-white rounded-[3.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 border border-slate-100">
-                <div className="p-16 space-y-20">
-                  {/* COCKPIT HEADER */}
+          <div className="grid gap-6 lg:grid-cols-12">
+            {/* Main workspace */}
+            <div className="lg:col-span-8 space-y-6">
+              <Card className="border border-gray-200 dark:border-slate-700 shadow-sm">
+                <CardHeader className="pb-4 border-b border-gray-100 dark:border-slate-700">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-8">
-                       <div className="h-16 w-1.5 flex flex-col gap-1.5">
-                          <div className="flex-1 bg-primary rounded-full animate-pulse" />
-                          <div className="flex-1 bg-slate-200 rounded-full" />
-                       </div>
-                       <div>
-                          <h2 className="text-6xl font-black text-slate-900 italic tracking-tighter uppercase leading-none">My Counter</h2>
-                          <div className="flex items-center gap-6 mt-6">
-                             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[9px] font-black text-slate-500 tracking-widest">
-                               AGENT ID: <span className="text-primary">{currentEmployee?.uniqueCode || "---"}</span>
-                             </div>
-                             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 border border-emerald-100 rounded-full text-[9px] font-black text-emerald-600 tracking-widest">
-                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                CONNECTED
-                             </div>
-                          </div>
-                       </div>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <CardTitle className="text-2xl">My Workspace</CardTitle>
+                        <div className="flex items-center gap-3 mt-2">
+                          <Badge variant="outline" className="text-xs font-medium border-gray-200 text-gray-500">
+                            ID: {currentEmployee?.uniqueCode || "---"}
+                          </Badge>
+                          <Badge className="bg-emerald-50 text-emerald-700 border-none text-xs font-medium">
+                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5" /> Active
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Current Time</div>
-                       <div className="text-2xl font-black text-slate-900 font-outfit tracking-tighter">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">Current time</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
                   </div>
-
-                  {/* MONEY CONTROLS */}
-                  <div className="grid gap-10 md:grid-cols-2">
-                    <div className="bg-slate-50 p-12 rounded-[3.5rem] space-y-12 group hover:bg-slate-100/50 transition-all border border-slate-100">
+                </CardHeader>
+                <CardContent className="p-6 space-y-8">
+                  {/* Cash and float request */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="p-5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
                       <div className="flex items-center justify-between">
-                         <div className="px-4 py-1.5 bg-white border border-slate-200 rounded-full text-[9px] font-black text-slate-500 tracking-widest uppercase">Physical Cash</div>
-                         <Wallet className="h-6 w-6 text-slate-300 group-hover:text-primary transition-all" />
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cash in Hand</span>
+                        <Wallet className="h-4 w-4 text-gray-400" />
                       </div>
-                      <div className="flex items-baseline gap-4">
-                        <span className="text-7xl font-black text-slate-200 font-outfit italic tracking-tighter">$</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-gray-300">$</span>
                         <input
                           type="number"
                           value={currentCash}
                           onChange={e => setCurrentCash(e.target.value)}
-                          className="flex-1 bg-transparent border-none text-8xl font-black text-slate-900 font-outfit outline-none focus:ring-0 p-0 placeholder:text-slate-100 tracking-tighter italic"
+                          className="flex-1 bg-transparent text-4xl font-bold text-gray-900 dark:text-white outline-none placeholder:text-gray-200"
                           placeholder="0.00"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-rows-2 gap-10">
-                      <div className="bg-white border-2 border-slate-100 p-10 rounded-[3rem] flex items-center justify-between group hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer" onClick={() => setShowFloatForm(true)}>
-                         <div className="space-y-3">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Quick Access</p>
-                            <h3 className="text-4xl font-black text-slate-900 italic tracking-tighter uppercase">Request Money</h3>
-                         </div>
-                         <div className="h-20 w-20 bg-slate-50 rounded-[1.5rem] flex items-center justify-center border border-slate-100 group-hover:bg-primary group-hover:text-white transition-all">
-                            <Plus className="h-10 w-10" />
-                         </div>
-                      </div>
+                    <div className="grid grid-rows-2 gap-3">
+                      <button
+                        onClick={() => setShowFloatForm(true)}
+                        className="p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl flex items-center justify-between group hover:border-blue-300 transition-colors"
+                      >
+                        <div>
+                          <p className="text-xs text-gray-400 mb-0.5">Quick Action</p>
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-white">Request Float</h3>
+                        </div>
+                        <div className="h-10 w-10 bg-gray-50 dark:bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all text-gray-400">
+                          <Plus className="h-5 w-5" />
+                        </div>
+                      </button>
                       
-                      <div className="bg-primary/5 border border-primary/10 p-10 rounded-[3rem] flex items-center justify-between group hover:bg-primary/10 transition-all">
-                         <div className="space-y-4">
-                            <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em]">Estimated Bonus (15%)</p>
-                            <div className="flex items-baseline gap-3">
-                               <p className="text-5xl font-black text-slate-900 font-outfit italic tracking-tighter">$12.42</p>
-                               <span className="text-[9px] text-slate-400 font-black tracking-widest uppercase">Net Earned</span>
-                            </div>
-                         </div>
-                         <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/10 border border-primary/5">
-                            <Activity className="h-8 w-8 text-primary" />
-                         </div>
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-blue-600 font-medium mb-0.5">Est. Commission (15%)</p>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white">$12.42</p>
+                        </div>
+                        <Activity className="h-5 w-5 text-blue-500 opacity-50" />
                       </div>
                     </div>
                   </div>
 
-                  {/* ASSET ARRAY */}
-                  <div className="space-y-12">
-                    <div className="flex items-center gap-8">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] italic whitespace-nowrap">Line Balances</span>
-                       <div className="h-px w-full bg-slate-100" />
+                  {/* Line balances */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Provider Balances</span>
+                      <div className="h-px flex-1 bg-gray-100 dark:bg-slate-700" />
                     </div>
-                    <div className="grid gap-8 md:grid-cols-3">
+                    <div className="grid gap-3 md:grid-cols-3">
                       {linesQuery.data?.map((line: any) => (
                         <div
                           key={line.id}
-                          className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 space-y-10 group hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all"
+                          className="p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-3"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="px-3 py-1 bg-white border border-slate-200 rounded-full text-[8px] font-black text-slate-500 tracking-widest">{line.agentCode}</div>
-                            <Smartphone className="h-5 w-5 text-slate-300 group-hover:text-primary transition-all" />
+                            <Badge variant="outline" className="text-[10px] font-mono font-medium border-gray-200 text-gray-500">{line.agentCode}</Badge>
+                            <Smartphone className="h-4 w-4 text-gray-300" />
                           </div>
-                          <div className="space-y-4">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">FLOAT BALANCE</span>
-                            <div className="flex items-baseline gap-2">
-                               <span className="text-3xl font-black text-slate-200 font-outfit italic tracking-tighter">$</span>
-                               <input
-                                  type="number"
-                                  placeholder="0.00"
-                                  value={lineBalances[line.providerId] || ""}
-                                  onChange={e => setLineBalances({ ...lineBalances, [line.providerId]: e.target.value })}
-                                  className="w-full bg-transparent border-none text-5xl font-black text-slate-900 font-outfit outline-none focus:ring-0 p-0 placeholder:text-slate-100 tracking-tighter italic"
-                               />
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">Float Balance</p>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-lg font-bold text-gray-300">$</span>
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                value={lineBalances[line.providerId] || ""}
+                                onChange={e => setLineBalances({ ...lineBalances, [line.providerId]: e.target.value })}
+                                className="w-full bg-transparent text-2xl font-bold text-gray-900 dark:text-white outline-none placeholder:text-gray-200"
+                              />
                             </div>
                           </div>
                         </div>
@@ -419,119 +432,129 @@ export default function WorkerPortal() {
                     </div>
                   </div>
 
-                  <div className="pt-12 border-t border-slate-100 space-y-12">
-                    <div className="space-y-6">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] px-8 italic">Shift Operation Notes</label>
+                  {/* Notes and submit */}
+                  <div className="pt-4 border-t border-gray-100 dark:border-slate-700 space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-gray-500">Shift Notes (optional)</label>
                       <textarea
-                        placeholder="ENTER LOG DETAILS..."
+                        placeholder="Any notes about this update..."
                         value={updateReason}
                         onChange={e => setUpdateReason(e.target.value)}
-                        className="w-full p-12 bg-slate-50 border border-slate-100 rounded-[3rem] font-mono text-sm focus:outline-none focus:border-primary transition-all min-h-[160px] text-slate-700 placeholder:text-slate-200 shadow-inner"
+                        className="w-full p-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 min-h-[80px] resize-none"
                       />
                     </div>
                     <Button
                       onClick={handleLiveUpdate}
-                      className="w-full h-24 rounded-[3rem] bg-primary hover:bg-primary/90 text-white font-black text-xl uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all font-outfit italic"
+                      className="w-full h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
                     >
-                      Commit Terminal Sync <Save className="ml-5 h-7 w-7" />
+                      Save Balances <Save className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
               {showFloatForm && (
-                <div className="bg-white rounded-[4rem] p-16 space-y-16 animate-in zoom-in-95 duration-500 shadow-4xl border border-slate-100">
-                  <div className="flex items-center justify-between">
+                <Card className="border border-gray-200 dark:border-slate-700 shadow-sm">
+                  <CardHeader className="flex flex-row items-center justify-between pb-4">
                     <div>
-                      <h3 className="text-5xl font-black text-slate-900 italic uppercase tracking-tighter">Request Money</h3>
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-3">Apply for additional float capital</p>
+                      <CardTitle className="text-xl">Request Float</CardTitle>
+                      <CardDescription>Apply for additional float capital</CardDescription>
                     </div>
-                    <Button variant="ghost" className="h-16 w-16 rounded-3xl hover:bg-slate-50" onClick={() => setShowFloatForm(false)}>
-                      <XCircle className="h-10 w-10 text-slate-300" />
+                    <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => setShowFloatForm(false)}>
+                      <XCircle className="h-5 w-5 text-gray-400" />
                     </Button>
-                  </div>
-                  <div className="grid gap-12 md:grid-cols-2">
-                    <div className="space-y-6">
-                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] px-8 italic">Select Provider</label>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-500">Provider</label>
                         <select
                           value={requestProviderId}
                           onChange={e => setRequestProviderId(e.target.value)}
-                          className="w-full h-24 px-10 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-lg outline-none focus:border-primary text-slate-900 italic"
+                          className="w-full h-11 px-3.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         >
-                          <option value="">SELECT GATEWAY...</option>
+                          <option value="">Select provider...</option>
                           {providersQuery.data?.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
                         </select>
-                    </div>
-                    <div className="space-y-6">
-                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] px-8 italic">Amount Required ($)</label>
-                       <input
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-500">Amount ($)</label>
+                        <input
                           type="number"
                           placeholder="0.00"
                           value={requestAmount}
                           onChange={e => setRequestAmount(e.target.value)}
-                          className="w-full h-24 px-12 bg-slate-50 border border-slate-100 rounded-[2rem] font-black text-6xl text-center focus:outline-none focus:border-primary text-slate-900 italic tracking-tighter font-outfit"
+                          className="w-full h-11 px-3.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         />
+                      </div>
                     </div>
-                  </div>
-                  <Button onClick={handleFloatRequest} className="w-full h-24 rounded-[3rem] bg-slate-900 hover:scale-[1.01] active:scale-95 text-white font-black text-xl uppercase tracking-[0.3em] shadow-2xl transition-all font-outfit">
-                    Submit Request <Send className="ml-5 h-6 w-6" />
-                  </Button>
-                </div>
+                    <Button
+                      onClick={handleFloatRequest}
+                      className="w-full h-11 rounded-lg bg-gray-900 dark:bg-slate-700 hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                    >
+                      Submit Request <Send className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
-            {/* COMMUNICATIONS FEED */}
-            <div className="lg:col-span-4 space-y-12">
-               <div className="bg-white rounded-[3.5rem] p-12 flex flex-col h-full min-h-[900px] shadow-2xl shadow-slate-200/50 border border-slate-100">
-                  <div className="flex items-center justify-between mb-12 pb-8 border-b border-slate-100">
-                     <div>
-                        <h3 className="text-3xl font-black text-slate-900 italic uppercase tracking-tighter">Activity log</h3>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Historical telemetry</p>
-                     </div>
-                     <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100">
-                        <Terminal className="h-6 w-6 text-slate-400" />
-                     </div>
+            {/* Activity log sidebar */}
+            <div className="lg:col-span-4">
+              <Card className="border border-gray-200 dark:border-slate-700 shadow-sm sticky top-8">
+                <CardHeader className="pb-4 border-b border-gray-100 dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Activity Log</CardTitle>
+                      <CardDescription>Your float request history</CardDescription>
+                    </div>
+                    <div className="h-9 w-9 bg-gray-50 dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-700">
+                      <History className="h-4 w-4 text-gray-400" />
+                    </div>
                   </div>
-                  
-                  <div className="flex-1 space-y-8 overflow-y-auto custom-scrollbar pr-6">
+                </CardHeader>
+                <CardContent className="p-4 max-h-[600px] overflow-y-auto">
+                  <div className="space-y-3">
                     {myRequestsQuery.data?.map((req: any) => (
-                      <div key={req.id} className="p-8 bg-slate-50 border border-slate-100 rounded-[2.5rem] space-y-8 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
+                      <div key={req.id} className="p-4 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-lg space-y-3">
                         <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-4">
-                              <div className={`h-2.5 w-2.5 rounded-full ${req.status === 'pending' ? 'bg-amber-400 animate-pulse' : req.status === 'transferred' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                              <span className="font-mono text-[10px] text-slate-400 uppercase tracking-widest">REF_{req.id.toString().padStart(4, '0')}</span>
-                           </div>
-                           <span className="font-mono text-[10px] text-slate-300 font-bold">{new Date(req.requestTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                          <div className="flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${req.status === 'pending' ? 'bg-amber-400' : req.status === 'transferred' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                            <span className="font-mono text-xs text-gray-400">#{req.id.toString().padStart(4, '0')}</span>
+                          </div>
+                          <span className="text-xs text-gray-400">{new Date(req.requestTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         
                         <div className="flex items-center justify-between">
-                           <div className="space-y-1">
-                              <p className="text-4xl font-black text-slate-900 font-outfit italic tracking-tighter">${parseFloat(req.amount).toLocaleString()}</p>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{providersQuery.data?.find(p => p.id === req.providerId)?.name}</p>
-                           </div>
-                           <Badge className={`border-none font-black text-[8px] uppercase px-4 py-2 rounded-xl h-fit ${
-                             req.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
-                             req.status === 'verified' ? 'bg-blue-100 text-blue-700 animate-pulse' :
-                             req.status === 'transferred' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                           }`}>
-                             {req.status === 'verified' ? 'Processing (Verified)' : req.status}
-                           </Badge>
+                          <div>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">${parseFloat(req.amount).toLocaleString()}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{providersQuery.data?.find(p => p.id === req.providerId)?.name}</p>
+                          </div>
+                          <Badge className={`border-none font-medium text-xs px-2.5 py-1 ${
+                            req.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
+                            req.status === 'verified' ? 'bg-blue-100 text-blue-700' :
+                            req.status === 'transferred' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {req.status === 'verified' ? 'Processing' : req.status}
+                          </Badge>
                         </div>
                       </div>
                     ))}
                   </div>
+                </CardContent>
 
-                  <div className="mt-12 pt-12 border-t border-slate-100">
-                    <Button
-                      onClick={handleCheckOut}
-                      className="w-full h-20 rounded-[2rem] bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-600 hover:text-white font-black text-xs uppercase tracking-[0.4em] font-outfit italic transition-all group"
-                    >
-                      <Power className="mr-5 h-6 w-6 group-hover:animate-spin" /> END SHIFT
-                    </Button>
-                  </div>
-               </div>
+                <div className="p-4 border-t border-gray-100 dark:border-slate-700">
+                  <Button
+                    onClick={handleCheckOut}
+                    variant="outline"
+                    className="w-full h-11 rounded-lg border-red-200 text-red-600 hover:bg-red-50 font-medium text-sm"
+                  >
+                    <Power className="mr-2 h-4 w-4" /> End Shift
+                  </Button>
+                </div>
+              </Card>
             </div>
           </div>
         )}
