@@ -11,6 +11,7 @@ export interface TransactionAnalysisResult {
     | "timing_anomaly"
     | "duplicate_risk"
     | "fraud_risk"
+    | "kyc_missing"
     | "other";
   riskScore: number;
   reason: string;
@@ -55,11 +56,10 @@ export class TransactionAnalysisService {
       await db.insert(transactionFlags).values({
         transactionId,
         flagType: "kyc_missing",
-        riskScore: 1.0,
+        riskScore: "1.00",
         reason: `COMPLIANCE BREACH: Transaction of ${amountVal} processed without valid Customer ID record.`,
         llmAnalysis: { manual_flag: true, rule: "KYC_THRESHOLD_500" },
         status: "flagged",
-        createdAt: new Date(),
       });
       
       return {
@@ -144,11 +144,10 @@ export class TransactionAnalysisService {
         await db.insert(transactionFlags).values({
           transactionId,
           flagType: analysis.flagType,
-          riskScore: analysis.riskScore,
+          riskScore: (analysis.riskScore || 0).toString(),
           reason: analysis.reason,
           llmAnalysis: analysis,
           status: "flagged",
-          createdAt: new Date(),
         });
       }
 

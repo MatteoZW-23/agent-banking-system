@@ -30,7 +30,7 @@ export async function getDb() {
 
   if (!_db && process.env.DATABASE_URL && !isPlaceholder) {
     try {
-      _client = postgres(process.env.DATABASE_URL, { prepare: false });
+      _client = postgres(process.env.DATABASE_URL, { prepare: false, connect_timeout: 5000 });
       _db = drizzle(_client);
       console.log("[Database] Initialized Supabase/Postgres connection");
     } catch (error) {
@@ -59,7 +59,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod", "password"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -71,6 +71,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
 
     textFields.forEach(assignNullable);
+
+    if (user.mustChangePassword !== undefined) {
+      values.mustChangePassword = user.mustChangePassword;
+      updateSet.mustChangePassword = user.mustChangePassword;
+    }
 
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
@@ -135,7 +140,10 @@ export async function updateUser(openId: string, data: Partial<InsertUser>) {
 export async function setUserPassword(email: string, password: string) {
   const db = await getDb();
   if (!db) return null;
-  await db.update(users).set({ password }).where(eq(users.email, email));
+  await db
+    .update(users)
+    .set({ password, mustChangePassword: false })
+    .where(eq(users.email, email));
 }
 
 // Provider queries
@@ -172,7 +180,16 @@ export async function getEmployeeByCode(code: string) {
   const db = await getDb();
   if (!db) return null;
   const result = await db
-    .select()
+    .select({
+      id: employees.id,
+      branchId: employees.branchId,
+      uniqueCode: employees.uniqueCode,
+      email: employees.email,
+      location: employees.location,
+      role: employees.role,
+      status: employees.status,
+      name: employees.name
+    })
     .from(employees)
     .where(eq(employees.uniqueCode, code))
     .limit(1);
@@ -183,7 +200,16 @@ export async function getEmployeeByEmail(email: string) {
   const db = await getDb();
   if (!db) return null;
   const result = await db
-    .select()
+    .select({
+      id: employees.id,
+      branchId: employees.branchId,
+      uniqueCode: employees.uniqueCode,
+      email: employees.email,
+      location: employees.location,
+      role: employees.role,
+      status: employees.status,
+      name: employees.name
+    })
     .from(employees)
     .where(eq(employees.email, email))
     .limit(1);
@@ -194,7 +220,16 @@ export async function getAllEmployees() {
   const db = await getDb();
   if (!db) return [];
   return await db
-    .select()
+    .select({
+      id: employees.id,
+      branchId: employees.branchId,
+      uniqueCode: employees.uniqueCode,
+      email: employees.email,
+      location: employees.location,
+      role: employees.role,
+      status: employees.status,
+      name: employees.name
+    })
     .from(employees)
     .where(eq(employees.status, "active"));
 }
@@ -212,6 +247,13 @@ export async function createEmployee(data: any) {
   const randomSuffix = Math.floor(100000 + Math.random() * 900000);
   const staffId = `${prefix}-${randomSuffix}`;
   
+  // Generate a random 8-character password
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let tempPassword = "";
+  for (let i = 0; i < 8; i++) {
+    tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
   const employeeData = {
     ...data,
     uniqueCode: staffId,
@@ -220,8 +262,29 @@ export async function createEmployee(data: any) {
 
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(employees).values(employeeData);
-  return { id: result.insertId, ...employeeData };
+  
+  // 1. Insert Employee
+  const [result] = await db.insert(employees).values(employeeData).returning({ id: employees.id });
+  
+  // 2. Create User for Login
+  if (data.email) {
+    try {
+      await upsertUser({
+        openId: `usr-${data.role}-${data.email.toLowerCase()}`,
+        name: data.name,
+        email: data.email.toLowerCase(),
+        role: data.role as any,
+        password: tempPassword,
+        mustChangePassword: true,
+        lastSignedIn: new Date(),
+      });
+      console.log(`[Auth] User created for ${data.email} with temp password: ${tempPassword}`);
+    } catch (err) {
+      console.error("[Auth] Failed to create user for employee:", err);
+    }
+  }
+  
+  return { id: result.id, ...employeeData, tempPassword };
 }
 
 export async function updateEmployee(id: number, data: any) {
@@ -234,8 +297,8 @@ export async function updateEmployee(id: number, data: any) {
 export async function registerAgentLine(data: any) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(agentRegistrations).values(data);
-  return { id: result.insertId, ...data };
+  const [result] = await db.insert(agentRegistrations).values(data).returning({ id: agentRegistrations.id });
+  return { id: result.id, ...data };
 }
 
 export async function deleteAgentLine(id: number) {
@@ -257,8 +320,8 @@ export async function getEmployeeRegistrations(employeeId: number) {
 export async function createCheckIn(data: any) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(checkIns).values(data);
-  return { id: result.insertId, ...data };
+  const [result] = await db.insert(checkIns).values(data).returning({ id: checkIns.id });
+  return { id: result.id, ...data };
 }
 
 export async function checkoutEmployee(checkInId: number, closingData: any) {
@@ -286,8 +349,8 @@ export async function getLatestCheckIn(employeeId: number) {
 export async function createFloatRequest(data: any) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(floatRequests).values(data);
-  return { id: result.insertId, ...data };
+  const [result] = await db.insert(floatRequests).values(data).returning({ id: floatRequests.id });
+  return { id: result.id, ...data };
 }
 
 export async function getAllFloatRequests(status?: string) {
@@ -329,8 +392,8 @@ export async function processFloatRequest(id: number, data: any) {
 export async function createBalanceSnapshot(data: any) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(workerBalanceSnapshots).values(data);
-  return { id: result.insertId, ...data };
+  const [result] = await db.insert(workerBalanceSnapshots).values(data).returning({ id: workerBalanceSnapshots.id });
+  return { id: result.id, ...data };
 }
 
 export async function getLatestBalanceSnapshot(employeeId: number) {
@@ -510,7 +573,7 @@ export async function getDailySettlement(providerId: number, date: Date) {
     .where(
       and(
         eq(dailySettlements.providerId, providerId),
-        eq(dailySettlements.settlementDate, date)
+        eq(dailySettlements.settlementDate, date.toISOString().split("T")[0])
       )
     )
     .limit(1);

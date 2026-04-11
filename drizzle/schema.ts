@@ -57,6 +57,7 @@ export const floatRequestStatusEnum = pgEnum("float_request_status", [
   "approved",
   "declined",
   "transferred",
+  "completed",
 ]);
 export const payoutFrequencyEnum = pgEnum("payout_frequency", [
   "instant",
@@ -126,6 +127,7 @@ export const users = pgTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   agreedToTerms: boolean("agreedToTerms").default(false).notNull(),
   termsAgreedAt: timestamp("termsAgreedAt"),
+  mustChangePassword: boolean("mustChangePassword").default(true).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

@@ -177,7 +177,7 @@ export default function Home() {
     );
   }
 
-  if (!isAuthenticated) return <DashboardLayout />;
+  if (!isAuthenticated) return <DashboardLayout children={null} />;
 
   const stats = [
     {

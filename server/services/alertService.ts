@@ -11,9 +11,12 @@ export interface AlertNotification {
 }
 
 export class AlertService {
-  checkAllThresholds: any;
-  checkAllThresholds(): any {
-    throw new Error("Method not implemented.");
+  /**
+   * Check all system thresholds and trigger alerts
+   */
+  async checkAllThresholds(): Promise<void> {
+    await this.checkFloatThresholds();
+    await this.checkSuspiciousPatterns();
   }
   /**
    * Create and trigger an alert

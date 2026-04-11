@@ -137,6 +137,8 @@ export default function WorkerPortal() {
       if (!confirmed) return;
     }
 
+    if (!selectedAgentId) return;
+
     try {
       const res = await checkInMutation.mutateAsync({
         employeeId: selectedAgentId,
@@ -231,6 +233,55 @@ export default function WorkerPortal() {
 
   if (!isAuthenticated) return null;
 
+  // SECURITY CHECK: If employee is not active, block access immediately
+  if (currentEmployee && currentEmployee.status !== "active") {
+    return (
+      <DashboardLayout>
+        <div className="max-w-xl mx-auto pt-20">
+          <Card className="border-2 border-red-500 bg-red-50 dark:bg-red-900/10 shadow-2xl">
+            <CardHeader className="text-center pb-6">
+              <div className="h-20 w-20 mx-auto bg-red-100 dark:bg-red-800 flex items-center justify-center rounded-full mb-6 border-4 border-white dark:border-slate-800 shadow-lg">
+                <ShieldAlert className="h-10 w-10 text-red-600 dark:text-red-400" />
+              </div>
+              <CardTitle className="text-3xl font-extrabold text-red-900 dark:text-red-100 uppercase tracking-tight">Access Revoked</CardTitle>
+              <CardDescription className="text-red-700 dark:text-red-300 font-medium text-lg mt-2">
+                Your operative status has been set to: <span className="font-bold underline">{currentEmployee.status.toUpperCase()}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0 space-y-6 text-center">
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-lg border border-red-200 dark:border-red-800 shadow-inner">
+                <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed">
+                  Your identity (Code: <span className="font-mono font-bold text-red-600">{currentEmployee.uniqueCode}</span>) is no longer authorized to access fiscal lines or move liquidity within the Apex Banking network.
+                </p>
+              </div>
+
+              <div className="bg-amber-100 dark:bg-amber-900/20 p-4 rounded-lg flex gap-4 text-left border border-amber-200 dark:border-amber-800">
+                <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-amber-900 dark:text-amber-100 uppercase">Immediate Action Required</p>
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    If you are currently in possession of physical SIM cards or float-enabled hardware, you must report to your Branch Manager (Branch: <strong>{branchesQuery.data?.find(b => b.id === currentEmployee.branchId)?.name || "Unassigned"}</strong>) for immediate handover.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-red-100 dark:border-red-900/30">
+                <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest mb-4">Security Protocol: Active Enforcement</p>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.location.href = "/login"}
+                  className="w-full h-12 rounded-lg border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700 font-bold"
+                >
+                  Return to Command Login
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-8 pb-16">
@@ -319,9 +370,14 @@ export default function WorkerPortal() {
 
                 <Button
                   onClick={handleCheckIn}
+                  disabled={checkInMutation.isPending}
                   className="w-full h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
                 >
-                  Start Shift <ChevronRight className="h-4 w-4" />
+                  {checkInMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>Start Shift <ChevronRight className="h-4 w-4" /></>
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -445,9 +501,14 @@ export default function WorkerPortal() {
                     </div>
                     <Button
                       onClick={handleLiveUpdate}
+                      disabled={balanceUpdateMutation.isPending}
                       className="w-full h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
                     >
-                      Save Balances <Save className="h-4 w-4" />
+                      {balanceUpdateMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>Save Balances <Save className="h-4 w-4" /></>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -492,9 +553,14 @@ export default function WorkerPortal() {
                     </div>
                     <Button
                       onClick={handleFloatRequest}
+                      disabled={requestFloatMutation.isPending}
                       className="w-full h-11 rounded-lg bg-gray-900 dark:bg-slate-700 hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2"
                     >
-                      Submit Request <Send className="h-4 w-4" />
+                      {requestFloatMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>Submit Request <Send className="h-4 w-4" /></>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>

@@ -55,6 +55,7 @@ import {
   Database,
   Mail,
   Phone,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -65,6 +66,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 function EmployeeLines({ employeeId }: { employeeId: number }) {
@@ -129,17 +136,18 @@ export default function Nodes() {
   const { isAuthenticated } = useAuth({ redirectOnUnauthenticated: true });
   const branchesQuery = trpc.nodes.listBranches.useQuery(undefined, {
     enabled: isAuthenticated,
-    refetchInterval: 30000, // Sync branches every 30s
+    refetchInterval: 30000,
   });
   const employeesQuery = trpc.nodes.listEmployees.useQuery(undefined, {
     enabled: isAuthenticated,
-    refetchInterval: 10000, // Sync staff status every 10s for real-time tracking
+    refetchInterval: 10000,
   });
   const providersQuery = trpc.providers.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
   const createEmployeeMutation = trpc.nodes.createEmployee.useMutation();
+  const updateEmployeeMutation = trpc.nodes.updateEmployee.useMutation();
   const registerLineMutation = trpc.nodes.registerLine.useMutation();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,6 +161,61 @@ export default function Nodes() {
   const [newBranchId, setNewBranchId] = useState("");
   const [newRole, setNewRole] = useState("agent");
   const [activeServices, setActiveServices] = useState<Record<number, string>>({});
+  const [tempCredentials, setTempCredentials] = useState<{ email: string; pass: string } | null>(null);
+
+  const [isLocating, setIsLocating] = useState(false);
+
+  const branches = branchesQuery.data || [];
+  const employees = employeesQuery.data || [];
+
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const detectNearestBranch = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        let nearestBranch: any = null;
+        let minDistance = Infinity;
+
+        branches.forEach((b: any) => {
+          if (b.latitude && b.longitude) {
+            const dist = getDistance(latitude, longitude, b.latitude, b.longitude);
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearestBranch = b;
+            }
+          }
+        });
+
+        if (nearestBranch) {
+          setNewBranchId(nearestBranch.id.toString());
+          setNewLocation(nearestBranch.region || "");
+          toast.success(`Detected proximity to ${nearestBranch.name} (${minDistance.toFixed(1)}km)`);
+        }
+        setIsLocating(false);
+      },
+      (error) => {
+        toast.error("Failed to detect location", { description: error.message });
+        setIsLocating(false);
+      }
+    );
+  };
 
   const handleAddAgent = async () => {
     if (!newName || !newBranchId) {
@@ -161,7 +224,7 @@ export default function Nodes() {
     }
 
     try {
-      const employee = await createEmployeeMutation.mutateAsync({
+      const result = await createEmployeeMutation.mutateAsync({
         name: newName,
         email: newEmail,
         phone: newPhone,
@@ -170,10 +233,17 @@ export default function Nodes() {
         role: newRole as any,
       });
 
+      if (result.tempPassword) {
+        setTempCredentials({ 
+          email: newEmail, 
+          pass: (result as any).tempPassword 
+        });
+      }
+
       for (const [providerId, agentCode] of Object.entries(activeServices)) {
         if (agentCode) {
           await registerLineMutation.mutateAsync({
-            employeeId: employee.id,
+            employeeId: result.id,
             providerId: parseInt(providerId),
             agentCode: agentCode,
           });
@@ -181,7 +251,6 @@ export default function Nodes() {
       }
 
       toast.success(`${newName} registered successfully`);
-      setIsDialogOpen(false);
       employeesQuery.refetch();
 
       setNewName("");
@@ -191,15 +260,16 @@ export default function Nodes() {
       setNewBranchId("");
       setNewRole("agent");
       setActiveServices({});
+      
+      if (!(result as any).tempPassword) {
+        setIsDialogOpen(false);
+      }
     } catch (err) {
       toast.error("Registration failed");
     }
   };
 
   if (!isAuthenticated) return null;
-
-  const branches = branchesQuery.data || [];
-  const employees = employeesQuery.data || [];
 
   const filteredEmployees = employees.filter(
     emp =>
@@ -235,146 +305,238 @@ export default function Nodes() {
                       <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                         <UserCog className="h-5 w-5 text-blue-600" />
                       </div>
-                      <DialogTitle className="text-xl font-bold">New Worker</DialogTitle>
-                      <DialogDescription className="text-sm text-gray-500">
-                        Register a new team member
-                      </DialogDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <DialogTitle className="text-xl font-bold">New Worker</DialogTitle>
+                          <DialogDescription className="text-sm text-gray-500">
+                            Register a new team member
+                          </DialogDescription>
+                        </div>
+                        {!tempCredentials && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={detectNearestBranch}
+                            disabled={isLocating}
+                            className="h-8 text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1.5"
+                          >
+                            {isLocating ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <MapPin className="h-3 w-3" />
+                            )}
+                            {isLocating ? "Detecting..." : "Detect Nearest"}
+                          </Button>
+                        )}
+                      </div>
                     </DialogHeader>
                   </div>
 
-                  <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Full Name *</label>
-                        <input
-                          placeholder="e.g. Tendai"
-                          value={newName}
-                          onChange={e => setNewName(e.target.value)}
-                          className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Branch *</label>
-                        <select
-                          value={newBranchId}
-                          onChange={e => setNewBranchId(e.target.value)}
-                          className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm outline-none focus:border-blue-500"
-                        >
-                          <option value="">Select branch...</option>
-                          {branches.map(b => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Role</label>
-                        <select
-                          value={newRole}
-                          onChange={e => setNewRole(e.target.value)}
-                          className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm outline-none focus:border-blue-500"
-                        >
-                          <option value="agent">Field Agent</option>
-                          <option value="supervisor">Supervisor</option>
-                          <option value="manager">Manager</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Email</label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <input
-                            placeholder="email@company.co.zw"
-                            value={newEmail}
-                            onChange={e => setNewEmail(e.target.value)}
-                            className="w-full h-10 pl-10 pr-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                          />
+                  {tempCredentials ? (
+                    <div className="p-6 space-y-6">
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl p-5 text-center">
+                        <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center mx-auto mb-3">
+                          <ShieldCheck className="h-6 w-6 text-emerald-600" />
                         </div>
+                        <h4 className="text-emerald-900 dark:text-emerald-100 font-bold">Enrollment Successful</h4>
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">Credentials generated for employee</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Phone</label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <input
-                            placeholder="+263 7..."
-                            value={newPhone}
-                            onChange={e => setNewPhone(e.target.value)}
-                            className="w-full h-10 pl-10 pr-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                          />
+
+                      <div className="space-y-3">
+                        <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800">
+                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Email Address</p>
+                          <p className="text-sm font-mono font-medium">{tempCredentials.email}</p>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Location</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <select
-                          value={newLocation}
-                          onChange={e => setNewLocation(e.target.value)}
-                          className="w-full h-10 pl-10 pr-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm focus:border-blue-500 outline-none"
-                        >
-                          <option value="">Select town/city...</option>
-                          {ZIMBABWE_TOWNS.map(town => (
-                            <option key={town} value={town}>{town}</option>
-                          ))}
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 pt-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
-                          Provider Lines
-                        </h4>
-                        <Layers className="h-3.5 w-3.5 text-blue-400 opacity-40" />
-                      </div>
-
-                      <div className="grid gap-2">
-                        {providersQuery.data?.map((p: any) => (
-                          <div
-                            key={p.id}
-                            className="p-3 bg-gray-50 dark:bg-slate-800 rounded-md border border-gray-100 dark:border-slate-700 flex items-center justify-between"
+                        <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Temporary Password</p>
+                            <p className="text-lg font-mono font-bold text-blue-600 tracking-widest">{tempCredentials.pass}</p>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              navigator.clipboard.writeText(tempCredentials.pass);
+                              toast.success("Password copied");
+                            }}
+                            className="h-8 w-8 p-0"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className={`h-8 w-8 rounded-md flex items-center justify-center ${activeServices[p.id] ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" : "bg-white dark:bg-slate-700 text-gray-300"}`}>
-                                <Smartphone className="h-4 w-4" />
-                              </div>
-                              <span className={`text-sm font-medium ${activeServices[p.id] ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>
-                                {p.name}
-                              </span>
-                            </div>
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-lg flex gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                          <strong>Security Note:</strong> Please share these credentials securely. The employee will be forced to change this password upon their first login.
+                        </p>
+                      </div>
+
+                      <Button 
+                        className="w-full bg-slate-900 dark:bg-white dark:text-slate-900 h-11 rounded-lg font-bold"
+                        onClick={() => {
+                          setTempCredentials(null);
+                          setIsDialogOpen(false);
+                        }}
+                      >
+                        Done & Close
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+                        <div className="grid grid-cols-1 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Full Name *</label>
                             <input
-                              placeholder="Agent ID..."
-                              value={activeServices[p.id] || ""}
-                              onChange={e =>
-                                setActiveServices({
-                                  ...activeServices,
-                                  [p.id]: e.target.value,
-                                })
-                              }
-                              className="w-36 h-8 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-2.5 text-xs font-mono text-center focus:outline-none focus:border-blue-500"
+                              placeholder="e.g. Tendai"
+                              value={newName}
+                              onChange={e => setNewName(e.target.value)}
+                              className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                             />
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                        </div>
 
-                  <div className="p-6 bg-gray-50 dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex flex-col items-center gap-3">
-                    <Button
-                      onClick={handleAddAgent}
-                      className="w-full h-11 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
-                    >
-                      Save Worker <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Branch *</label>
+                            <select
+                              value={newBranchId}
+                              onChange={e => {
+                                const bId = e.target.value;
+                                setNewBranchId(bId);
+                                const b = branches.find(curr => curr.id.toString() === bId);
+                                if (b && !newLocation) {
+                                  setNewLocation(b.region || "");
+                                }
+                              }}
+                              className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm outline-none focus:border-blue-500"
+                            >
+                              <option value="">Select branch...</option>
+                              {branches.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Role</label>
+                            <select
+                              value={newRole}
+                              onChange={e => setNewRole(e.target.value)}
+                              className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm outline-none focus:border-blue-500"
+                            >
+                              <option value="agent">Field Agent</option>
+                              <option value="supervisor">Supervisor</option>
+                              <option value="manager">Manager</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Email</label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <input
+                                placeholder="email@company.co.zw"
+                                value={newEmail}
+                                onChange={e => setNewEmail(e.target.value)}
+                                className="w-full h-10 pl-10 pr-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Phone</label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <input
+                                placeholder="+263 7..."
+                                value={newPhone}
+                                onChange={e => setNewPhone(e.target.value)}
+                                className="w-full h-10 pl-10 pr-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Location</label>
+                          <div className="relative">
+                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <select
+                              value={newLocation}
+                              onChange={e => {
+                                const loc = e.target.value;
+                                setNewLocation(loc);
+                                const matchingBranch = branches.find(b => 
+                                  b.name.toLowerCase().includes(loc.toLowerCase()) || 
+                                  loc.toLowerCase().includes(b.name.toLowerCase())
+                                );
+                                if (matchingBranch && !newBranchId) {
+                                  setNewBranchId(matchingBranch.id.toString());
+                                }
+                              }}
+                              className="w-full h-10 pl-10 pr-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm focus:border-blue-500 outline-none"
+                            >
+                              <option value="">Select town/city...</option>
+                              {ZIMBABWE_TOWNS.map(town => (
+                                <option key={town} value={town}>{town}</option>
+                              ))}
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 pt-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+                              Provider Lines
+                            </h4>
+                            <Layers className="h-3.5 w-3.5 text-blue-400 opacity-40" />
+                          </div>
+
+                          <div className="grid gap-2">
+                            {providersQuery.data?.map((p: any) => (
+                              <div
+                                key={p.id}
+                                className="p-3 bg-gray-50 dark:bg-slate-800 rounded-md border border-gray-100 dark:border-slate-700 flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`h-8 w-8 rounded-md flex items-center justify-center ${activeServices[p.id] ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" : "bg-white dark:bg-slate-700 text-gray-300"}`}>
+                                    <Smartphone className="h-4 w-4" />
+                                  </div>
+                                  <span className={`text-sm font-medium ${activeServices[p.id] ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>
+                                    {p.name}
+                                  </span>
+                                </div>
+                                <input
+                                  placeholder="Agent ID..."
+                                  value={activeServices[p.id] || ""}
+                                  onChange={e =>
+                                    setActiveServices({
+                                      ...activeServices,
+                                      [p.id]: e.target.value,
+                                    })
+                                  }
+                                  className="w-36 h-8 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded px-2.5 text-xs font-mono text-center focus:outline-none focus:border-blue-500"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6 bg-gray-50 dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex flex-col items-center gap-3">
+                        <Button
+                          onClick={handleAddAgent}
+                          className="w-full h-11 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                        >
+                          Save Worker <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </DialogContent>
               </Dialog>
             </div>
@@ -387,7 +549,6 @@ export default function Nodes() {
           }}
         />
 
-        {/* Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           {[
             { label: "Total Staff", value: employees.length.toString(), icon: Users2, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
@@ -410,7 +571,6 @@ export default function Nodes() {
           ))}
         </div>
 
-        {/* Branch table */}
         <Card className="border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-blue-600 to-blue-400 opacity-30 w-full" />
           <CardHeader className="flex flex-row items-center justify-between pt-6 px-6 pb-4">
@@ -488,7 +648,6 @@ export default function Nodes() {
           </CardContent>
         </Card>
 
-        {/* Employee cards */}
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
             <div>
@@ -553,17 +712,68 @@ export default function Nodes() {
                       )}
                     </div>
 
-                    <Button
-                      onClick={() => setExpandedEmployee(isExpanded ? null : emp.id)}
-                      variant="ghost"
-                      className={`w-full h-9 rounded-md text-xs font-medium flex items-center justify-between ${isExpanded ? "bg-gray-900 dark:bg-slate-700 text-blue-400" : "bg-gray-50 dark:bg-slate-800 text-gray-500 hover:bg-gray-100"}`}
-                    >
-                      {isExpanded ? (
-                        <>Hide details <ChevronUp className="h-4 w-4" /></>
-                      ) : (
-                        <>View details <ChevronDown className="h-4 w-4" /></>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setExpandedEmployee(isExpanded ? null : emp.id)}
+                        variant="ghost"
+                        className={`flex-1 h-9 rounded-md text-xs font-medium flex items-center justify-between ${isExpanded ? "bg-gray-900 dark:bg-slate-700 text-blue-400" : "bg-gray-50 dark:bg-slate-800 text-gray-500 hover:bg-gray-100"}`}
+                      >
+                        {isExpanded ? (
+                          <>Hide details <ChevronUp className="h-4 w-4" /></>
+                        ) : (
+                          <>View details <ChevronDown className="h-4 w-4" /></>
+                        )}
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="h-9 w-9 p-0 border-gray-200 dark:border-slate-700">
+                            <ShieldCheck className="h-4 w-4 text-gray-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 p-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-2 border-b border-gray-100 dark:border-slate-800 mb-1">
+                            Disciplinary Actions
+                          </p>
+                          <DropdownMenuItem 
+                            onClick={async () => {
+                              try {
+                                await updateEmployeeMutation.mutateAsync({ id: emp.id, status: "suspended" });
+                                toast.warning(`${emp.name} has been SUSPENDED`);
+                                employeesQuery.refetch();
+                              } catch(err) { toast.error("Failed to update status"); }
+                            }}
+                            className="text-amber-600 focus:text-amber-600 focus:bg-amber-50 cursor-pointer text-xs font-semibold p-2.5"
+                          >
+                            <AlertTriangle className="h-4 w-4 mr-2" /> Suspend Operative
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={async () => {
+                              try {
+                                await updateEmployeeMutation.mutateAsync({ id: emp.id, status: "inactive" });
+                                toast.error(`${emp.name} access REVOKED`);
+                                employeesQuery.refetch();
+                              } catch(err) { toast.error("Failed to update status"); }
+                            }}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-xs font-semibold p-2.5"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" /> Deactivate Account
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={async () => {
+                              try {
+                                await updateEmployeeMutation.mutateAsync({ id: emp.id, status: "active" });
+                                toast.success(`${emp.name} restored to ACTIVE`);
+                                employeesQuery.refetch();
+                              } catch(err) { toast.error("Failed to update status"); }
+                            }}
+                            className="text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50 cursor-pointer text-xs font-semibold p-2.5"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" /> Restore Access
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
 
                     {isExpanded && <EmployeeLines employeeId={emp.id} />}
                   </CardContent>
@@ -573,7 +783,6 @@ export default function Nodes() {
           </div>
         </div>
 
-        {/* Network summary footer */}
         <div className="p-8 rounded-xl bg-gray-900 text-white mt-8">
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">

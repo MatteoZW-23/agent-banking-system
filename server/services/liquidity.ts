@@ -61,7 +61,7 @@ export class LiquidityOrchestrator {
         floatBalances[providerId] = (floatBalances[providerId] || 0) + amt; // Receive float
       } else if (txn.type === "salary_disbursement") {
         cash += amt; // Agent received their salary in cash, increasing their physical ledger
-      } else if (txn.type === "float_purchase" && txn.metadata?.is_commission_refill) {
+      } else if (txn.type === "float_purchase" && (txn.metadata as any)?.is_commission_refill) {
         floatBalances[providerId] = (floatBalances[providerId] || 0) + amt; // Agent refilled float using their commission
       }
     }
@@ -110,7 +110,7 @@ export class LiquidityOrchestrator {
         .select()
         .from(floatRequests)
         .where(and(eq(floatRequests.employeeId, employeeId), eq(floatRequests.status, "approved")))
-        .orderBy(floatRequests.createdAt);
+        .orderBy(floatRequests.requestTime);
 
       let remainingToSettle = debtToClear;
 
@@ -155,6 +155,7 @@ export class LiquidityOrchestrator {
 
   private async getEmployeeCode(id: number): Promise<string> {
     const db = await getDb();
+    if (!db) throw new Error("Database not available");
     const emp = await db.select({ code: employees.uniqueCode }).from(employees).where(eq(employees.id, id)).limit(1);
     return emp[0]?.code || "UNKNOWN";
   }

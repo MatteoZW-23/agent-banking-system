@@ -22,7 +22,7 @@ import SupervisorTeam from "@/pages/SupervisorTeam";
 import SupervisorIntel from "@/pages/SupervisorIntel";
 import ComponentsShowcase from "@/pages/ComponentsShowcase";
 import { Route, Switch, Redirect } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "./_core/hooks/useAuth";
 
@@ -32,11 +32,18 @@ function Router() {
   // Only block the entire app if we're not on the login page
   if (loading && window.location.pathname !== "/login") return null;
 
+  if (user?.mustChangePassword && 
+      !window.location.pathname.startsWith("/setup-password") && 
+      window.location.pathname !== "/login") {
+    return <Redirect to={`/setup-password/${user.email}`} />;
+  }
+
   const isAdmin = user?.role === "admin";
   const isSupervisor = user?.role === "supervisor";
   const isManager = user?.role === "manager";
   const isAgent = user?.role === "agent";
   const isManagement = isAdmin || isSupervisor || isManager;
+  const postLoginPath = isAdmin ? "/" : isManagement ? "/supervisor" : "/worker";
 
   return (
     <Switch>
@@ -50,7 +57,9 @@ function Router() {
         }}
       </Route>
 
-      <Route path="/login" component={LoginPage} />
+      <Route path="/login">
+        {() => (user ? <Redirect to={postLoginPath} /> : <LoginPage />)}
+      </Route>
 
       <Route path="/setup-password/:code" component={PasswordSetupPage} />
 

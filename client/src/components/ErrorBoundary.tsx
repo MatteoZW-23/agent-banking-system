@@ -1,56 +1,66 @@
-import { cn } from "@/lib/utils";
-import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Component, ReactNode } from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
-  error: Error | null;
+  error?: Error;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+  };
 
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  render() {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
-            <AlertTriangle
-              size={48}
-              className="text-destructive mb-6 flex-shrink-0"
-            />
-
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
-
-            <button
-              onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
-            >
-              <RotateCcw size={16} />
-              Reload Page
-            </button>
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center space-y-6 bg-white dark:bg-slate-900 rounded-2xl border border-red-100 dark:border-red-900/20 shadow-xl shadow-red-500/5">
+          <div className="h-20 w-20 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center animate-pulse">
+            <AlertTriangle className="h-10 w-10 text-red-600" />
           </div>
+          
+          <div className="max-w-md space-y-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Something went wrong</h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              An unexpected error occurred in the banking interface. Your session is safe, but this view needs to be reloaded.
+            </p>
+          </div>
+
+          <div className="flex gap-4">
+            <Button 
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="rounded-lg h-11 px-6 border-red-200 text-red-600 hover:bg-red-50"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Reload Page
+            </Button>
+            
+            <Button 
+              onClick={() => (window.location.href = "/")}
+              className="rounded-lg h-11 px-6 bg-gray-900 text-white"
+            >
+              Back to Safety
+            </Button>
+          </div>
+
+          {process.env.NODE_ENV === "development" && (
+            <div className="mt-8 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg text-left text-xs font-mono text-red-500 overflow-auto max-w-full">
+              {this.state.error?.toString()}
+            </div>
+          )}
         </div>
       );
     }
@@ -58,5 +68,3 @@ class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-export default ErrorBoundary;

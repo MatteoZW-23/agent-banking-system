@@ -13,6 +13,7 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  console.log("Creating Vite server...");
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
@@ -20,7 +21,9 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  console.log("Vite server created. Registering middlewares...");
   app.use(vite.middlewares);
+  console.log("Vite middlewares registered.");
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 

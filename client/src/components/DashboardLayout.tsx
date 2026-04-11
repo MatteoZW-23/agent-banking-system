@@ -41,21 +41,45 @@ import {
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
-const adminMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: ArrowLeftRight, label: "Transactions", path: "/transactions" },
-  { icon: ClipboardCheck, label: "Reconciliation", path: "/reconciliation" },
-  { icon: Wallet, label: "Manage Floats", path: "/floats" },
-  { icon: Bell, label: "Alerts", path: "/alerts" },
-  { icon: BadgePercent, label: "Commissions", path: "/commissions" },
-  { icon: ShieldCheck, label: "Security", path: "/security" },
-  { icon: Users2, label: "Staff Directory", path: "/nodes" },
-  { icon: FileUp, label: "Import CSV", path: "/csv-import" },
-  { icon: FileChartLine, label: "Reports", path: "/reports" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+const adminMenuGroups = [
+  {
+    label: "Core Operations",
+    items: [
+      { icon: LayoutDashboard, label: "Admin Console", path: "/" },
+      { icon: ArrowLeftRight, label: "Live Transactions", path: "/transactions" },
+      { icon: ClipboardCheck, label: "Reconciliation", path: "/reconciliation" },
+    ]
+  },
+  {
+    label: "Network Management",
+    items: [
+      { icon: Wallet, label: "Float Command", path: "/floats" },
+      { icon: Users2, label: "Operative Directory", path: "/nodes" },
+      { icon: Building2, label: "Branch Oversight", path: "/supervisor" },
+      { icon: Wallet, label: "Top-up Queue", path: "/supervisor/requests" },
+    ]
+  },
+  {
+    label: "Security & Intel",
+    items: [
+      { icon: ShieldCheck, label: "Security Radar", path: "/security" },
+      { icon: ShieldCheck, label: "System Intel", path: "/supervisor/intel" },
+      { icon: Users2, label: "Team Audit", path: "/supervisor/team" },
+    ]
+  },
+  {
+    label: "Administrative",
+    items: [
+      { icon: FileUp, label: "Batch CSV Import", path: "/csv-import" },
+      { icon: FileChartLine, label: "Network Reports", path: "/reports" },
+      { icon: BadgePercent, label: "Commission Logic", path: "/commissions" },
+      { icon: Settings, label: "System Config", path: "/settings" },
+    ]
+  }
 ];
 
 const workerMenuItems = [
@@ -63,12 +87,22 @@ const workerMenuItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
-const supervisorMenuItems = [
-  { icon: LayoutDashboard, label: "Overview", path: "/supervisor" },
-  { icon: Wallet, label: "Requests", path: "/supervisor/requests" },
-  { icon: Users2, label: "Team", path: "/supervisor/team" },
-  { icon: ShieldCheck, label: "Security Feed", path: "/supervisor/intel" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+const supervisorMenuGroups = [
+  {
+    label: "Frontline Control",
+    items: [
+      { icon: LayoutDashboard, label: "Overview", path: "/supervisor" },
+      { icon: Wallet, label: "Requests", path: "/supervisor/requests" },
+    ]
+  },
+  {
+    label: "Management",
+    items: [
+      { icon: Users2, label: "Team", path: "/supervisor/team" },
+      { icon: ShieldCheck, label: "Security Feed", path: "/supervisor/intel" },
+      { icon: Settings, label: "Settings", path: "/settings" },
+    ]
+  }
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -78,6 +112,8 @@ const MAX_WIDTH = 480;
 
 import { FloatingAIAssistant } from "./FloatingAIAssistant";
 import { TermsModal } from "./TermsModal";
+import { DeveloperCreditsModal } from "./DeveloperCreditsModal";
+import { BadgeInfo } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -162,19 +198,59 @@ function DashboardLayoutContent({
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
+  const utils = trpc.useUtils();
+  const [showTerms, setShowTerms] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (user && !(user as any).agreedToTerms) {
+      setShowTerms(true);
+    } else {
+      setShowTerms(false);
+    }
+  }, [user]);
+
   const isWorker = user?.role === "agent";
   const isSupervisorOrManager = user?.role === "supervisor" || user?.role === "manager";
 
-  const menuItems = isWorker
-    ? workerMenuItems
-    : isSupervisorOrManager
-      ? supervisorMenuItems
-      : adminMenuItems;
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const renderMenuItems = (items: { icon: any; label: string; path: string }[]) => (
+    <SidebarMenu className="gap-1 py-1">
+      {items.map(item => {
+        const isActive = location === item.path || (item.path !== "/" && location.startsWith(item.path));
+        return (
+          <SidebarMenuItem key={item.path}>
+            <SidebarMenuButton
+              isActive={isActive}
+              onClick={() => setLocation(item.path)}
+              tooltip={item.label}
+              className={`h-9 rounded-lg transition-all duration-200 ${isActive
+                ? "bg-blue-600 shadow-lg shadow-blue-500/20 text-white font-bold"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+            >
+              <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : ""}`} />
+              <span className="text-[13px] tracking-tight truncate">{item.label}</span>
+              {isActive && !isCollapsed && (
+                <div className="ml-auto flex items-center">
+                  <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                </div>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
+
+  const activeLabel = isWorker 
+    ? "Worker Hub" 
+    : isSupervisorOrManager 
+      ? "Manager Command" 
+      : "Admin Console";
+
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -237,10 +313,10 @@ function DashboardLayoutContent({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-white tracking-tight">
-                      Sovereign Finance
+                      Limitless Junction
                     </span>
                     <span className="text-[11px] text-slate-500">
-                      Agent Banking
+                      All your agents. One hub.
                     </span>
                   </div>
                 </div>
@@ -252,31 +328,32 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 px-3">
-            <SidebarMenu className="gap-1 py-2">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 rounded-lg transition-colors ${isActive
-                        ? "bg-blue-600/15 text-white font-semibold"
-                        : "text-slate-400 hover:text-white hover:bg-white/5"
-                        }`}
-                    >
-                      <item.icon className={`h-4 w-4 ${isActive ? "text-blue-400" : ""}`} />
-                      <span className="text-sm">{item.label}</span>
-                      {isActive && !isCollapsed && (
-                        <div className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400" />
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+          <SidebarContent className="gap-6 px-3 py-6 custom-scrollbar overflow-y-auto">
+            {isWorker ? (
+               renderMenuItems(workerMenuItems)
+            ) : isSupervisorOrManager ? (
+               supervisorMenuGroups.map(group => (
+                 <div key={group.label} className="space-y-2">
+                   {!isCollapsed && (
+                     <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                       {group.label}
+                     </p>
+                   )}
+                   {renderMenuItems(group.items)}
+                 </div>
+               ))
+            ) : (
+              adminMenuGroups.map(group => (
+                <div key={group.label} className="space-y-2">
+                  {!isCollapsed && (
+                    <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] opacity-50 mb-1">
+                      {group.label}
+                    </p>
+                  )}
+                  {renderMenuItems(group.items)}
+                </div>
+              ))
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-3 gap-3">
@@ -292,13 +369,21 @@ function DashboardLayoutContent({
                     <p className="text-sm font-medium text-white truncate">
                       {user?.name || "-"}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {user?.email}
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em]">
+                      Limitless Junction · All your agents. One hub.
                     </p>
                   </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-lg p-1">
+                <DropdownMenuItem
+                  onClick={() => setShowCredits(true)}
+                  className="cursor-pointer text-blue-500 font-medium text-sm p-2.5 rounded-md"
+                >
+                  <BadgeInfo className="mr-2 h-4 w-4" />
+                  <span>Developer Credits</span>
+                </DropdownMenuItem>
+                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-1" />
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-red-500 font-medium text-sm p-2.5 rounded-md"
@@ -327,7 +412,7 @@ function DashboardLayoutContent({
           <header className="flex h-14 items-center justify-between bg-[#0F172A] px-4 border-b border-slate-800 sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-800" />
-              <h2 className="text-sm font-semibold text-white">{activeMenuItem?.label}</h2>
+              <h2 className="text-sm font-semibold text-white">{activeLabel}</h2>
             </div>
           </header>
         )}
@@ -344,6 +429,10 @@ function DashboardLayoutContent({
           setShowTerms(false);
           utils.auth.me.invalidate();
         }} 
+      />
+      <DeveloperCreditsModal 
+        isOpen={showCredits}
+        onClose={() => setShowCredits(false)}
       />
     </>
   );

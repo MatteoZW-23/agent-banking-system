@@ -228,10 +228,9 @@ export class CommissionService {
         providerId,
         amount: totalCommission.toString(),
         type: "earning",
-        status: structure.payoutFrequency === "instant" ? "cleared" : "pending",
         earnedAt: new Date(),
-        payoutDate: this.calculatePayoutDate(structure.payoutFrequency),
-      });
+        payoutDate: this.calculatePayoutDate(structure.payoutFrequency).toISOString().split("T")[0],
+      } as any);
     }
 
     return totalCommission;
@@ -300,7 +299,8 @@ export class CommissionService {
     instantCommission: number;
     accruedCommission: number;
     totalPayroll: number; // 15% share
-    bossShare: number;   // 85% share
+    supervisorPool: number; // 5% share
+    bossShare: number;   // 80% share
     employeeCount: number;
     details: CommissionCalculation[];
   }> {

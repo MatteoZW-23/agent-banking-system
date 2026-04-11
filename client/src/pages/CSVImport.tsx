@@ -271,7 +271,7 @@ export default function CSVImport() {
                     ].map((m, i) => (
                       <div key={i} className={`p-4 rounded-xl ${m.bg} flex flex-col`}>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">{m.label}</p>
-                        <p className={`text-xl font-bold ${m.color}`}>{m.value ?? m.val}</p>
+                        <p className={`text-xl font-bold ${m.color}`}>{m.val}</p>
                       </div>
                     ))}
                   </div>

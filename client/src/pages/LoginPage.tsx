@@ -8,18 +8,19 @@ import {
   ShieldAlert as Lock,
   Mail,
   ChevronRight,
-  Building2,
   AlertCircle,
   Smartphone,
   ArrowLeft,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   InputOTP,
   InputOTPGroup,
-  InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { useLocation } from "wouter";
 
 type Role = "admin" | "supervisor" | "manager" | "agent";
 
@@ -30,9 +31,17 @@ const ROLES: { value: Role; label: string }[] = [
   { value: "agent", label: "Agent" },
 ];
 
+const getPostLoginPath = (role: Role) => {
+  if (role === "agent") return "/worker";
+  if (role === "supervisor" || role === "manager") return "/supervisor";
+  return "/";
+};
+
 
 
 export default function LoginPage() {
+  const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   const [role, setRole] = useState<Role>("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,6 +50,7 @@ export default function LoginPage() {
   const [mfaToken, setMfaToken] = useState("");
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation();
   const forgotPasswordMutation = trpc.auth.forgotPassword.useMutation();
@@ -69,17 +79,51 @@ export default function LoginPage() {
         return;
       }
 
+      const signedInRole = (res.role as Role | undefined) ?? role;
+
       const roleName =
-        role === "admin"
+        signedInRole === "admin"
           ? "Administrator"
-          : role === "supervisor"
+          : signedInRole === "supervisor"
             ? "Regional Supervisor"
-            : role === "manager"
+            : signedInRole === "manager"
               ? "Manager"
               : "Field Agent";
 
+      if (res.mustChangePassword) {
+        toast.info("Security update required", {
+          description: "Please set a fresh password to secure your account for the first time."
+        });
+        setTimeout(() => {
+          window.location.href = `/setup-password/${email}`;
+        }, 1500);
+        return;
+      }
+
       toast.success(`Signed in as ${roleName}`);
-      window.location.href = "/";
+      const destination = getPostLoginPath(signedInRole);
+
+      await utils.auth.me.invalidate();
+
+      let hasSession = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const me = await utils.auth.me.fetch();
+          if (me) {
+            hasSession = true;
+            break;
+          }
+        } catch (_error) {
+          // Allow a short retry window so cookie/session propagation can settle.
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      if (hasSession) {
+        setLocation(destination);
+      } else {
+        window.location.href = destination;
+      }
     } catch (err: any) {
       const message = err.message || "Login failed";
       if (message.includes("Access Denied")) {
@@ -147,8 +191,8 @@ export default function LoginPage() {
               <img src="/user_logo.jpg" alt="Logo" className="w-full h-full object-cover scale-150" />
             </div>
             <div>
-              <h1 className="text-white text-xl font-bold">Sovereign Finance</h1>
-              <span className="text-blue-300 text-xs">Agent Banking Platform</span>
+                <h1 className="text-white text-xl font-bold">Limitless Money Junction Track</h1>
+                <span className="text-blue-300 text-xs text-center">All your agents. One hub.</span>
             </div>
           </div>
 
@@ -158,7 +202,7 @@ export default function LoginPage() {
               <span className="text-blue-300">Infrastructure.</span>
             </h2>
             <p className="text-blue-200/60 text-base">
-              Enterprise-grade capital management and real-time network oversight for your agent network.
+              Limitless Money Junction Track: Protecting Zimbabwean mobile money agents by tracking every transaction across all platforms in one real-time dashboard.
             </p>
           </div>
 
@@ -183,7 +227,8 @@ export default function LoginPage() {
               <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center border border-gray-200 overflow-hidden">
                 <img src="/user_logo.jpg" alt="Logo" className="w-full h-full object-cover scale-150" />
               </div>
-              <span className="text-lg font-bold text-gray-900">Sovereign Finance</span>
+              <span className="text-lg font-bold text-gray-900">Limitless Money Junction Track</span>
+              <p className="text-xs text-blue-600 font-bold">All your agents. One hub.</p>
             </div>
             <h3 className="text-2xl font-bold text-gray-900">Sign in to your account</h3>
             <p className="text-gray-500 text-sm mt-1">Enter your credentials to access the dashboard</p>
@@ -227,7 +272,7 @@ export default function LoginPage() {
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="email"
-                    placeholder="agent@sovereign.co.zw"
+                    placeholder="agent@apex.co.zw"
                     value={forgotPasswordEmail}
                     onChange={(e) => setForgotPasswordEmail(e.target.value)}
                     className="h-11 pl-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500"
@@ -335,16 +380,28 @@ export default function LoginPage() {
                     Forgot password?
                   </button>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="relative group">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                   <Input
                     id="login-password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 pl-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
+                    className="h-11 pl-11 pr-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 text-gray-900 placeholder:text-gray-400 transition-all font-mono"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-gray-400 hover:text-blue-600 rounded-md transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -367,7 +424,7 @@ export default function LoginPage() {
 
           <div className="mt-12 text-center">
             <p className="text-xs text-gray-400">
-              © 2026 Sovereign Financial Network
+              © 2026 Limitless Money Junction Group
             </p>
           </div>
         </div>

@@ -31,7 +31,7 @@ export function FloatingAIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: `Sovereign Finance Operations Support ready. I can analyze transactions, track float levels, and summarize regional performance. How can I assist with your current session?`,
+      content: `Limitless Junction Track ready. I'm here to help track all your agents in this single hub and prevent financial loss. How can I assist today?`,
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,15 +54,10 @@ export function FloatingAIAssistant() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      ) as HTMLDivElement;
-      if (viewport) {
-        viewport.scrollTo({
-          top: viewport.scrollHeight,
-          behavior: "smooth",
-        });
-      }
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages, isLoading]);
 
@@ -93,25 +88,28 @@ export function FloatingAIAssistant() {
   ];
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3 print:hidden">
+    <div className="fixed bottom-6 right-6 z-[999] print:hidden">
       {/* Chat Window */}
       {isOpen && (
-        <Card className="w-[380px] h-[580px] flex flex-col shadow-2xl border-gray-200 dark:border-slate-800 animate-in slide-in-from-bottom-5 fade-in duration-300 rounded-2xl overflow-hidden bg-white dark:bg-slate-950">
+        <Card 
+          className="absolute bottom-20 right-0 w-[400px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-none ring-1 ring-gray-200 dark:ring-slate-800 animate-in slide-in-from-bottom-5 fade-in duration-300 rounded-[2rem] overflow-hidden bg-white dark:bg-slate-950 flex flex-col"
+          style={{ height: 'min(700px, calc(100vh - 120px))' }}
+        >
           {/* Header */}
-          <div className="p-5 bg-blue-600 text-white flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
-                <HelpCircle className="h-5 w-5 text-white" />
+          <div className="p-6 bg-blue-600 text-white flex items-center justify-between shrink-0 shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shadow-inner">
+                <HelpCircle className="h-6 w-6 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold tracking-tight">Sovereign Assistant</span>
-                <span className="text-[10px] text-white/70 font-medium uppercase tracking-wide">Security Operations Intel</span>
+                <span className="text-[15px] font-bold tracking-tight">Limitless Junction</span>
+                <span className="text-[10px] text-white/70 font-bold uppercase tracking-[0.1em]">All your agents. One hub.</span>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/10 rounded-lg h-8 w-8 transition-colors"
+              className="text-white hover:bg-white/10 rounded-xl h-9 w-9 transition-all active:scale-90"
               onClick={() => setIsOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -119,87 +117,92 @@ export function FloatingAIAssistant() {
           </div>
 
           {/* Messages Area */}
-          <ScrollArea ref={scrollRef} className="flex-1 p-5">
-            <div className="space-y-4">
-              {messages.map((msg, i) => (
+          <div 
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth custom-scrollbar"
+            style={{ scrollbarWidth: 'thin' }}
+          >
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex flex-col max-w-[88%] space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                  msg.role === "user"
+                    ? "ml-auto items-end"
+                    : "mr-auto items-start"
+                )}
+              >
                 <div
-                  key={i}
                   className={cn(
-                    "flex flex-col max-w-[85%] space-y-1.5 animate-in fade-in slide-in-from-bottom-1 duration-300",
+                    "p-4 rounded-2xl text-sm font-medium leading-relaxed shadow-sm",
                     msg.role === "user"
-                      ? "ml-auto items-end"
-                      : "mr-auto items-start"
+                      ? "bg-blue-600 text-white rounded-tr-none"
+                      : "bg-gray-100 dark:bg-slate-900 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-slate-800"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "p-3.5 rounded-2xl text-sm font-medium leading-relaxed",
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-tr-none"
-                        : "bg-gray-100 dark:bg-slate-900 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-200 dark:border-slate-800"
-                    )}
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                      <Streamdown>{msg.content}</Streamdown>
+                    </div>
+                  ) : (
+                    <span className="break-words">{msg.content}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex flex-col max-w-[85%] items-start animate-in fade-in">
+                <div className="p-3 bg-gray-50/80 dark:bg-slate-900/80 text-gray-400 rounded-xl rounded-tl-none border border-gray-200 dark:border-slate-800 flex items-center gap-2 shadow-sm">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Processing Request...</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="flex flex-col bg-gray-50/50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-800">
+            {/* Suggested Prompts (Scrollable list if many) */}
+            {messages.length < 3 && !isLoading && (
+              <div className="px-4 py-3 flex flex-wrap gap-2 overflow-x-auto">
+                {suggestedPrompts.map(prompt => (
+                  <button
+                    key={prompt}
+                    onClick={() => setInput(prompt)}
+                    className="whitespace-nowrap px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-all active:scale-95 shadow-sm"
                   >
-                    {msg.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <Streamdown>{msg.content}</Streamdown>
-                      </div>
-                    ) : (
-                      msg.content
-                    )}
-                  </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="flex flex-col max-w-[85%] items-start animate-in fade-in">
-                  <div className="p-3 bg-gray-50 dark:bg-slate-900 text-gray-400 rounded-xl rounded-tl-none border border-gray-100 dark:border-slate-800 flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Processing...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Suggested Prompts */}
-          {messages.length < 3 && !isLoading && (
-            <div className="px-5 pb-3 flex flex-wrap gap-2">
-              {suggestedPrompts.map(prompt => (
-                <button
-                  key={prompt}
-                  onClick={() => setInput(prompt)}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+            {/* Input Area */}
+            <div className="p-4 pt-2 pb-5">
+              <div className="relative group">
+                <textarea
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Query system data..."
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 resize-none min-h-[56px] max-h-[140px] transition-all font-medium text-gray-700 dark:text-gray-200 ring-offset-background placeholder:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-slate-700"
+                />
+                <Button
+                  size="icon"
+                  className={cn(
+                    "absolute bottom-3 right-3 h-8 w-8 rounded-xl bg-blue-600 text-white shadow-lg transition-all active:scale-90",
+                    !input.trim() && "opacity-40 grayscale pointer-events-none"
+                  )}
+                  onClick={handleSend}
+                  disabled={!input.trim() || isLoading}
                 >
-                  {prompt}
-                </button>
-              ))}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-[8px] text-gray-400 mt-2 text-center font-bold tracking-[0.05em] uppercase opacity-60">
+                Limitless Money Junction Group
+              </p>
             </div>
-          )}
-
-          {/* Input Area */}
-          <div className="p-5 bg-gray-50/50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-800">
-            <div className="relative">
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder="Ask a question..."
-                className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 resize-none min-h-[54px] max-h-[120px] transition-all font-medium text-gray-700 dark:text-gray-200"
-              />
-              <Button
-                size="icon"
-                className={cn(
-                  "absolute bottom-2 right-2 h-7 w-7 rounded-lg bg-blue-600 text-white shadow-sm transition-all",
-                  !input.trim() && "opacity-50 pointer-events-none"
-                )}
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-              >
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <p className="text-[9px] text-gray-400 mt-3 text-center font-bold tracking-tight uppercase">
-              Sovereign Finance Network Support
-            </p>
           </div>
         </Card>
       )}

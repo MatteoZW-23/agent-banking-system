@@ -43,11 +43,19 @@ export function useAuth(options?: UseAuthOptions) {
     }
   }, [logoutMutation, utils]);
 
+  useEffect(() => {
+    try {
+      if (meQuery.data) {
+        localStorage.setItem("app-user-info", JSON.stringify(meQuery.data));
+      } else {
+        localStorage.removeItem("app-user-info");
+      }
+    } catch (error) {
+      // Ignore storage errors (private mode/quota) so auth flow remains stable.
+    }
+  }, [meQuery.data]);
+
   const state = useMemo(() => {
-    localStorage.setItem(
-      "app-user-info",
-      JSON.stringify(meQuery.data)
-    );
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,

@@ -18,7 +18,9 @@ import {
   UserCircle2,
   CheckCircle2,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function PasswordSetupPage() {
@@ -28,6 +30,8 @@ export default function PasswordSetupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const setupMutation = trpc.auth.setupPassword.useMutation();
 
@@ -115,15 +119,22 @@ export default function PasswordSetupPage() {
                   <label className="text-sm font-medium text-gray-700">
                     New Password
                   </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="relative group">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <Input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Min 6 characters..."
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-11 pl-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 text-gray-900"
+                      className="w-full h-11 pl-11 pr-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 text-gray-900 font-mono"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-gray-400 hover:text-blue-600 rounded-md transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -131,15 +142,22 @@ export default function PasswordSetupPage() {
                   <label className="text-sm font-medium text-gray-700">
                     Confirm Password
                   </label>
-                  <div className="relative">
-                    <CheckCircle2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="relative group">
+                    <CheckCircle2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                     <Input
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="Repeat password..."
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full h-11 pl-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 text-gray-900"
+                      className="w-full h-11 pl-11 pr-11 rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-500 text-gray-900 font-mono"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center text-gray-400 hover:text-blue-600 rounded-md transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
               </div>

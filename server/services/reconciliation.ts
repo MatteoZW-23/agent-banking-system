@@ -123,7 +123,7 @@ export class ReconciliationEngine {
       .where(
         and(
           eq(dailySettlements.providerId, providerId),
-          eq(dailySettlements.settlementDate, date)
+          eq(dailySettlements.settlementDate, date.toISOString().split("T")[0])
         )
       )
       .limit(1);
@@ -213,6 +213,9 @@ export class ReconciliationEngine {
       }
 
       // Convert to Integer Cents for "Zero Cent Loss" precision
+      const internalAmount = typeof internalTxn.amount === "string" ? parseFloat(internalTxn.amount) : (internalTxn.amount as number);
+      const externalAmount = typeof externalMatch.amount === "string" ? parseFloat(externalMatch.amount) : (externalMatch.amount as number);
+      
       const internalCents = Math.round(internalAmount * 100);
       const externalCents = Math.round(externalAmount * 100);
 
@@ -339,7 +342,7 @@ export class ReconciliationEngine {
     if (!db) return [];
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    return await db.select().from(dailySettlements).where(and(eq(dailySettlements.providerId, providerId), gte(dailySettlements.settlementDate, startDate))).orderBy(desc(dailySettlements.settlementDate));
+    return await db.select().from(dailySettlements).where(and(eq(dailySettlements.providerId, providerId), gte(dailySettlements.settlementDate, startDate.toISOString().split("T")[0]))).orderBy(desc(dailySettlements.settlementDate));
   }
 }
 

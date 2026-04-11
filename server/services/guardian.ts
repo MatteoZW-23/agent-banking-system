@@ -145,6 +145,7 @@ export class GuardianService {
 
   private async getEmployeeCode(id: number): Promise<string> {
     const db = await getDb();
+    if (!db) throw new Error("Database not available");
     const emp = await db.select({ code: employees.uniqueCode }).from(employees).where(eq(employees.id, id)).limit(1);
     return emp[0]?.code || "UNKNOWN";
   }

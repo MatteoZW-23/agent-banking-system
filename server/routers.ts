@@ -35,7 +35,6 @@ import {
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
-import { setMfaSecret, verifyMfaToken, disableMfa } from "./services/mfaService";
 import { supabaseAuthService } from "./services/supabaseAuth";
 import { alertService } from "./services/alertService";
 import { commissionService } from "./services/commissionService";
@@ -76,80 +75,144 @@ export const appRouter = router({
     login: publicProcedure
       .input(
         z.object({
-          email: z.string().email(),
-          password: z.string().min(1),
+          email: z.string().min(1, "Email is required"),
+          password: z.string().min(1, "Password is required"),
           role: z.enum(["admin", "agent", "supervisor", "manager"]),
           mfaToken: z.string().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
-        const allEmployees = await getAllEmployees();
-        const matched = allEmployees.find(
-          (e) => e.email?.toLowerCase() === input.email.toLowerCase()
+        console.log("[LOGIN ATTEMPT]", { email: input.email, role: input.role });
+        const normalizedInputEmail = input.email.trim().toLowerCase();
+        const hasMasterLoginConfigured = Boolean(
+          ENV.masterLoginEmail && ENV.masterLoginPassword
         );
+        const isMasterCredentials =
+          hasMasterLoginConfigured &&
+          normalizedInputEmail === ENV.masterLoginEmail &&
+          input.password === ENV.masterLoginPassword;
+
+        let matched = null;
+        try {
+          const allEmployees = await getAllEmployees();
+          matched = allEmployees.find(
+            (e) => e.email?.toLowerCase() === normalizedInputEmail
+          );
+        } catch (err) {
+          console.warn("[Auth] Employees table unreachable, proceeding with master check");
+        }
 
         // MFA CHECK
-        const userRec = await getUserByEmail(input.email);
-        
-        // Check DB password first if it exists
-        const isDbPasswordValid = userRec?.password && userRec.password === input.password;
-
-        const isAdmin = (userRec?.role === "admin" && isDbPasswordValid);
-        const isAgent = (userRec?.role === "agent" && isDbPasswordValid);
-        const isSupervisor = (userRec?.role === "supervisor" && isDbPasswordValid);
-
-        if (!isAdmin && !isAgent && !isSupervisor && !isDbPasswordValid) {
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "Wrong email or password.",
-          });
+        let userRec = null;
+        try {
+          userRec = await getUserByEmail(normalizedInputEmail);
+        } catch (err) {
+          console.warn("[Auth] Users table unreachable");
+          if (isMasterCredentials) {
+            userRec = {
+              openId: `master-${input.role}-${ENV.masterLoginEmail}`,
+              role: input.role,
+              email: normalizedInputEmail,
+              name: ENV.masterLoginName,
+              mfaEnabled: false
+            } as any;
+          }
         }
 
-        // Make sure the portal matches actual credentials
-        if (input.role === "admin" && !isAdmin)
-          throw new TRPCError({ code: "FORBIDDEN", message: "These are not Admin credentials." });
-        if (input.role === "agent" && !isAgent)
-          throw new TRPCError({ code: "FORBIDDEN", message: "These are not Agent credentials." });
-        if (input.role === "supervisor" && !isSupervisor)
-          throw new TRPCError({ code: "FORBIDDEN", message: "These are not Supervisor credentials." });
+        let resolvedRole: "admin" | "agent" | "supervisor" | "manager" = input.role;
+        let openId = "";
+        let displayName = "";
+        let mustChangePassword = false;
 
-        if (userRec?.mfaEnabled) {
-          if (!input.mfaToken) {
-            return { success: false, mfaRequired: true };
-          }
-          
-          const { mfaService } = await import("./services/mfaService");
-          const isValid = await mfaService.verifyToken(userRec.mfaSecret!, input.mfaToken);
-          if (!isValid) {
+        if (isMasterCredentials) {
+          resolvedRole = input.role;
+          openId = `master-${resolvedRole}-${ENV.masterLoginEmail}`;
+          displayName = ENV.masterLoginName;
+          mustChangePassword = false;
+        } else {
+          // Check DB password first if it exists
+          const isDbPasswordValid = Boolean(
+            userRec?.password && userRec.password === input.password
+          );
+
+          const isAdmin = userRec?.role === "admin" && isDbPasswordValid;
+          const isAgent = userRec?.role === "agent" && isDbPasswordValid;
+          const isSupervisor = userRec?.role === "supervisor" && isDbPasswordValid;
+          const isManager = userRec?.role === "manager" && isDbPasswordValid;
+
+          if (!isAdmin && !isAgent && !isSupervisor && !isManager && !isDbPasswordValid) {
             throw new TRPCError({
               code: "UNAUTHORIZED",
-              message: "Invalid multifactor authentication code."
+              message: "Wrong email or password.",
             });
           }
+
+          // Make sure the portal matches actual credentials
+          if (input.role === "admin" && !isAdmin) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "These are not Admin credentials." });
+          }
+          if (input.role === "agent" && !isAgent) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "These are not Agent credentials." });
+          }
+          if (input.role === "supervisor" && !isSupervisor) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "These are not Supervisor credentials." });
+          }
+          if (input.role === "manager" && !isManager) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "These are not Manager credentials." });
+          }
+
+          resolvedRole =
+            (userRec?.role as "admin" | "agent" | "supervisor" | "manager" | undefined) ??
+            input.role;
+
+          if (userRec?.mfaEnabled) {
+            if (!input.mfaToken) {
+              return { success: false, mfaRequired: true };
+            }
+
+            const { mfaService } = await import("./services/mfaService");
+            const isValid = await mfaService.verifyToken(userRec.mfaSecret!, input.mfaToken);
+            if (!isValid) {
+              throw new TRPCError({
+                code: "UNAUTHORIZED",
+                message: "Invalid multifactor authentication code."
+              });
+            }
+          }
+
+          openId =
+            userRec?.openId ||
+            (isAdmin ? (ENV.ownerOpenId || "admin-id") : `usr-${resolvedRole}-${normalizedInputEmail}`);
+          displayName =
+            userRec?.name || (isAdmin ? "Administrator" : (matched?.name || normalizedInputEmail.split("@")[0]));
+          mustChangePassword = userRec?.mustChangePassword ?? false;
         }
 
-        const openId = userRec?.openId || (isAdmin ? (ENV.ownerOpenId || "admin-id") : (matched?.openId || `usr-${input.role}-${input.email}`));
-        
-        // Ensure user exists in DB for session resolution
-        if (isAdmin || matched || userRec) {
+        try {
           await upsertUser({
             openId,
-            name: userRec?.name || (isAdmin ? "Administrator" : (matched?.name || input.email.split("@")[0])),
-            email: input.email,
-            role: input.role,
+            name: displayName,
+            email: normalizedInputEmail,
+            role: resolvedRole,
             lastSignedIn: new Date(),
           });
+        } catch (err) {
+          console.warn("[Auth] Failed to upsert user, continuing session anyway");
         }
 
-        const sessionToken = await sdk.createSessionToken(openId, { 
-          name: userRec?.name || (isAdmin ? "Admin" : (matched?.name || input.email)) 
+        const sessionToken = await sdk.createSessionToken(openId, {
+          name: displayName,
         });
 
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
         ctx.res.cookie("portal_role", input.role, { path: "/", maxAge: 3600000 });
 
-        return { success: true, role: input.role };
+        return {
+          success: true,
+          role: resolvedRole,
+          mustChangePassword
+        };
       }),
 
     forgotPassword: publicProcedure
@@ -164,10 +227,10 @@ export const appRouter = router({
           return { success: true };
         }
 
-        const openId = user?.openId || 
-                       (isAdminEmail ? (ENV.ownerOpenId || "admin-id") : 
-                       (employee ? `usr-${employee.role}-${employee.uniqueCode}` : `forgot-${input.email}`));
-        
+        const openId = user?.openId ||
+          (isAdminEmail ? (ENV.ownerOpenId || "admin-id") :
+            (employee ? `usr-${employee.role}-${employee.uniqueCode}` : `forgot-${input.email}`));
+
         if (!user) {
           await upsertUser({
             openId,
@@ -180,16 +243,16 @@ export const appRouter = router({
 
         // Generate a simple reset code for internal tracking
         const resetCode = employee?.uniqueCode || openId;
-        
+
         // Trigger Supabase Realtime Password Reset Email
         const emailSent = await supabaseAuthService.sendResetEmail(input.email);
-        
+
         if (emailSent) {
           console.log(`[AUTH] Supabase sent password reset email to ${input.email}`);
         } else {
           console.log(`[AUTH] Local fallback: reset code for ${input.email} is ${resetCode}`);
         }
-        
+
         return { success: true, resetCode };
       }),
 
@@ -198,7 +261,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const allEmployees = await getAllEmployees();
         const matched = allEmployees.find(e => e.uniqueCode === input.code);
-        
+
         let email = "";
         if (matched) {
           email = matched.email!;
@@ -208,10 +271,10 @@ export const appRouter = router({
           if (user) {
             email = user.email!;
           } else {
-             // Second fallback: check if code itself is an email
-             if (input.code.includes("@")) {
-               email = input.code;
-             }
+            // Second fallback: check if code itself is an email
+            if (input.code.includes("@")) {
+              email = input.code;
+            }
           }
         }
 
@@ -233,50 +296,15 @@ export const appRouter = router({
       .mutation(async ({ ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database unavailable");
-        
+
         await db.update(users)
           .set({
             agreedToTerms: true,
             termsAgreedAt: new Date()
           })
           .where(eq(users.id, ctx.user.id));
-        
+
         return { success: true };
-      }),
-  }),
-
-  // ── AI & GUARDIAN ──────────────────────────────────────────────────
-  ai: router({
-    chat: protectedProcedure
-      .input(
-        z.object({
-          messages: z.array(
-            z.object({ role: z.enum(["system", "user", "assistant"]), content: z.string() })
-          ),
-        })
-      )
-      .mutation(async ({ input }) => {
-        try {
-          const response = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are the Sovereign Finance Security Engine. Help detect fraud, smurfing, and collusion in agent banking. Be professional and direct.",
-              },
-              ...input.messages,
-            ],
-          });
-          return response.choices[0]?.message?.content || "No response available.";
-        } catch {
-          return "Security Engine is temporarily unavailable.";
-        }
-      }),
-
-    radar: supervisorProcedure
-      .input(z.object({ employeeId: z.number() }))
-      .query(async ({ input }) => {
-        return await guardianService.getLiquidityForecast(input.employeeId);
       }),
   }),
 
@@ -695,6 +723,60 @@ export const appRouter = router({
     getByProvider: protectedProcedure
       .input(z.object({ providerId: z.number() }))
       .query(async ({ input }) => await getCommissionStructures(input.providerId)),
+  }),
+
+  // -- AI ASSISTANT --
+  ai: router({
+    chat: protectedProcedure
+      .input(
+        z.object({
+          messages: z.array(
+            z.object({
+              role: z.enum(["system", "user", "assistant"]),
+              content: z.string(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { invokeLLM } = await import("./_core/llm");
+        
+        let systemContext = "You are the Operations Intelligence Engine, a professional corporate banking support system.";
+        try {
+          const { 
+            getAllBranches, getAllEmployees, getAlertHistory, getTotalFloatBalance 
+          } = await import("./db");
+          
+          const [branches, employees, alerts, floatBalance] = await Promise.all([
+            getAllBranches(),
+            getAllEmployees(),
+            getAlertHistory(5, 0),
+            getTotalFloatBalance()
+          ]);
+
+          systemContext = `
+[SYSTEM: SOVEREIGN FINANCE NETWORK]
+- Status: OPERATIONAL
+- Nodes: ${branches.length} | Staff: ${employees.length} | Alerts: ${alerts.length}
+- Liquidity: ${floatBalance?.[0]?.total ? `${parseFloat(floatBalance[0].total as string).toLocaleString()}` : "Calculating..."}
+
+[ROLE: SOVEREIGN ASSISTANT]
+You are a professional Security Operations Intel engine. Use the data above for analytical responses to ${ctx.user?.name || "User"} (${ctx.user?.role || "Staff"}). Focus on system performance and signal.
+          `.trim();
+        } catch (err) {
+          console.warn("[AI] Context injection failed:", err);
+        }
+
+        const response = await invokeLLM({
+          messages: [{ role: "system", content: systemContext }, ...input.messages.filter(m => m.role !== "system")] as any,
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (Array.isArray(content)) {
+          return content.map(part => ('text' in part ? (part as any).text : "")).join("\n");
+        }
+        return content || "No response received";
+      }),
   }),
 });
 

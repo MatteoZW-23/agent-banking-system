@@ -307,7 +307,7 @@ export default function Settings() {
                     </label>
                     <input
                       readOnly={!isSystemAdmin}
-                      defaultValue={isSystemAdmin ? "Sovereign Finance Global" : user?.name}
+                      defaultValue={isSystemAdmin ? "Sovereign Finance Global" : (user?.name || "")}
                       className="w-full h-10 px-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md font-medium text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-gray-900 dark:text-white"
                     />
                   </div>

@@ -25,10 +25,18 @@ export default defineConfig({
   },
   server: {
     host: true,
-    allowedHosts: [
-      "localhost",
-      "127.0.0.1",
-    ],
+    port: 5173,
+    proxy: {
+      "/api": {
+        target: "http://backend:8000",
+        changeOrigin: true,
+      },
+      "/ws": {
+        target: "ws://backend:8000",
+        ws: true,
+      },
+    },
+    allowedHosts: ["localhost", "127.0.0.1", "backend", "frontend"],
     fs: {
       strict: true,
       deny: ["**/.*"],
