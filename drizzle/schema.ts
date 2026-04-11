@@ -168,6 +168,8 @@ export const employees = pgTable(
     preferredPayoutMethod: payoutMethodEnum("payout_method").default("EcoCash"),
     payoutAccountNumber: varchar("payout_account", { length: 100 }),
     salaryPercentage: numeric("salary_percentage", { precision: 5, scale: 2 }).default("15.00"),
+    startingCapital: numeric("starting_capital", { precision: 15, scale: 2 }).default("0.00"),
+    commissionBalance: numeric("commission_balance", { precision: 15, scale: 2 }).default("0.00"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

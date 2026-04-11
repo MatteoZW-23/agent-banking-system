@@ -34,11 +34,23 @@ import {
   ShieldAlert,
   Terminal,
   Power,
-  Plus
+  Plus,
+  PowerOff,
+  AlertTriangle,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function WorkerPortal() {
   const { user, isAuthenticated, loading } = useAuth({ redirectOnUnauthenticated: true });
@@ -48,6 +60,11 @@ export default function WorkerPortal() {
   const [passcode, setPasscode] = useState("");
   const [currentCash, setCurrentCash] = useState("");
   const [closingCash, setClosingCash] = useState("");
+  const [checkoutNote, setCheckoutNote] = useState("");
+
+  const allBranchesQuery = trpc.nodes.listBranches.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   // Float Request State
   const [requestAmount, setRequestAmount] = useState("");
@@ -58,6 +75,7 @@ export default function WorkerPortal() {
   // Live Update State
   const [lineBalances, setLineBalances] = useState<Record<number, string>>({});
   const [updateReason, setUpdateReason] = useState("");
+  const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
 
   const myEmployeeInfoQuery = trpc.nodes.getMyEmployeeInfo.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -183,8 +201,9 @@ export default function WorkerPortal() {
     try {
       await checkOutMutation.mutateAsync({
         checkInId: session.id,
-        closingCash: parseFloat(closingCash),
-        notes: "End of shift checkout",
+        closingCash: parseFloat(closingCash || currentCash || "0"),
+        closingLineBalances: lineBalances,
+        notes: checkoutNote || "Self-verified checkout.",
       });
       setSession(null);
       setOpeningCash("");
@@ -192,6 +211,9 @@ export default function WorkerPortal() {
       setClosingCash("");
       setCurrentCash("");
       setLineBalances({});
+      setUpdateReason("");
+      setCheckoutNote("");
+      setShowCheckoutDialog(false);
       toast.success("Shift closed. Have a good rest!");
     } catch (err) {
       toast.error("Failed to close shift");
@@ -243,24 +265,24 @@ export default function WorkerPortal() {
               <div className="h-20 w-20 mx-auto bg-red-100 dark:bg-red-800 flex items-center justify-center rounded-full mb-6 border-4 border-white dark:border-slate-800 shadow-lg">
                 <ShieldAlert className="h-10 w-10 text-red-600 dark:text-red-400" />
               </div>
-              <CardTitle className="text-3xl font-extrabold text-red-900 dark:text-red-100 uppercase tracking-tight">Access Revoked</CardTitle>
+              <CardTitle className="text-3xl font-extrabold text-red-900 dark:text-red-100 uppercase tracking-tight">Status Update Required</CardTitle>
               <CardDescription className="text-red-700 dark:text-red-300 font-medium text-lg mt-2">
-                Your operative status has been set to: <span className="font-bold underline">{currentEmployee.status.toUpperCase()}</span>
+                Your account status is currently: <span className="font-bold underline">{(currentEmployee.status || "review required").toUpperCase()}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="p-8 pt-0 space-y-6 text-center">
               <div className="p-4 bg-white dark:bg-slate-900 rounded-lg border border-red-200 dark:border-red-800 shadow-inner">
                 <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed">
-                  Your identity (Code: <span className="font-mono font-bold text-red-600">{currentEmployee.uniqueCode}</span>) is no longer authorized to access fiscal lines or move liquidity within the Apex Banking network.
+                  Your Agent ID (Code: <span className="font-mono font-bold text-red-600">{currentEmployee.uniqueCode || "N/A"}</span>) has been scheduled for administrative review. Please contact support to resume your banking operations.
                 </p>
               </div>
 
               <div className="bg-amber-100 dark:bg-amber-900/20 p-4 rounded-lg flex gap-4 text-left border border-amber-200 dark:border-amber-800">
                 <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-amber-900 dark:text-amber-100 uppercase">Immediate Action Required</p>
+                  <p className="text-sm font-bold text-amber-900 dark:text-amber-100 uppercase">Security Briefing</p>
                   <p className="text-xs text-amber-800 dark:text-amber-200">
-                    If you are currently in possession of physical SIM cards or float-enabled hardware, you must report to your Branch Manager (Branch: <strong>{branchesQuery.data?.find(b => b.id === currentEmployee.branchId)?.name || "Unassigned"}</strong>) for immediate handover.
+                    Your assigned equipment and float funds require reconciliation. Please report to your Branch Manager (<strong>{allBranchesQuery.data?.find((b: any) => b.id === currentEmployee.branchId)?.name || "Main Branch"}</strong>) to complete the return process.
                   </p>
                 </div>
               </div>
@@ -291,13 +313,118 @@ export default function WorkerPortal() {
           category="Daily Operations"
           actions={
             session ? (
-              <Button 
-                variant="outline"
-                onClick={handleCheckOut}
-                className="h-10 rounded-lg border-red-200 text-red-600 hover:bg-red-50 px-5 font-medium text-sm"
-              >
-                <LogOut className="mr-2 h-4 w-4" /> End Shift
-              </Button>
+              <Dialog open={showCheckoutDialog} onOpenChange={setShowCheckoutDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="destructive"
+                    className="h-10 rounded-lg shadow-sm px-5 font-bold text-sm flex items-center gap-2"
+                  >
+                    <PowerOff className="h-4 w-4" /> End Shift
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                       <Power className="h-6 w-6 text-red-600" />
+                    </div>
+                    <DialogTitle className="text-xl">Balance Verification</DialogTitle>
+                    <DialogDescription>
+                      Review and confirm your final balances to close today's session.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                   <div className="py-4 space-y-4">
+                      {/* DYNAMIC DISCREPANCY HUD */}
+                      {(() => {
+                        const totalReported = parseFloat(closingCash || currentCash) + Object.values(lineBalances).reduce((s, v) => s + parseFloat(v || "0"), 0);
+                        const expected = parseFloat(currentCash) + (linesQuery.data?.reduce((s: number, l: any) => s + parseFloat(l.balance || "0"), 0) || 0);
+                        const diff = totalReported - expected;
+
+                        return (
+                          <div className={`p-4 rounded-xl border ${Math.abs(diff) < 2 ? 'bg-emerald-50 border-emerald-100' : diff > 0 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'} transition-all`}>
+                             <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-bold uppercase tracking-tighter text-gray-500">Live Discrepancy Check</span>
+                                <Badge variant="outline" className={`h-4 text-[8px] ${Math.abs(diff) < 2 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                   {Math.abs(diff) < 2 ? 'VERIFIED' : diff > 0 ? 'OVERAGE' : 'SHORTAGE'}
+                                </Badge>
+                             </div>
+                             <div className="flex items-baseline gap-2">
+                                <span className={`text-2xl font-black ${Math.abs(diff) < 2 ? 'text-emerald-600' : diff > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                                   {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                                </span>
+                                <span className="text-xs text-gray-400 font-medium">USD Variance</span>
+                             </div>
+                          </div>
+                        );
+                      })()}
+
+                      <div className="space-y-2">
+                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Final Cash In Hand</label>
+                         <div className="relative">
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-gray-300">$</span>
+                           <input
+                             type="number"
+                             value={closingCash || currentCash}
+                             onChange={(e) => setClosingCash(e.target.value)}
+                             className="w-full h-14 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                             placeholder="0.00"
+                           />
+                         </div>
+                      </div>
+
+                      <div className="grid gap-4">
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Verify Provider Balances</label>
+                            <div className="grid gap-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+                               {linesQuery.data?.map((line: any) => (
+                                  <div key={line.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                     <div className="flex items-center gap-2">
+                                       <div className="h-6 w-6 rounded bg-white border border-gray-100 flex items-center justify-center">
+                                          <Smartphone className="h-3 w-3 text-gray-400" />
+                                       </div>
+                                       <span className="text-[10px] font-bold text-gray-500 uppercase">{line.agentCode}</span>
+                                     </div>
+                                     <div className="relative">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-300">$</span>
+                                        <input
+                                          type="number"
+                                          value={lineBalances[line.providerId] || ""}
+                                          onChange={(e) => setLineBalances({ ...lineBalances, [line.providerId]: e.target.value })}
+                                          className="w-24 h-8 pl-5 pr-2 bg-white border border-gray-200 rounded text-right text-sm font-bold focus:outline-none focus:ring-1 focus:ring-red-500"
+                                          placeholder="0.00"
+                                        />
+                                     </div>
+                                  </div>
+                               ))}
+                            </div>
+                         </div>
+
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Reconciliation Notes</label>
+                            <textarea
+                               value={checkoutNote}
+                               onChange={(e) => setCheckoutNote(e.target.value)}
+                               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                               placeholder="e.g. Added $10 personal cash for change..."
+                            />
+                         </div>
+                      </div>
+                   </div>
+
+                  <DialogFooter>
+                    <Button variant="ghost" className="h-11 font-medium" onClick={() => setShowCheckoutDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      className="h-11 bg-red-600 hover:bg-red-700 text-white font-bold px-8"
+                      onClick={handleCheckOut}
+                      disabled={checkOutMutation.isPending}
+                    >
+                      {checkOutMutation.isPending ? "Closing..." : "Verify & End Shift"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             ) : null
           }
         />
@@ -309,13 +436,13 @@ export default function WorkerPortal() {
                 <div className="h-14 w-14 mx-auto bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mb-4">
                   <ShieldCheck className="h-7 w-7 text-blue-600" />
                 </div>
-                <CardTitle className="text-2xl">Start Your Shift</CardTitle>
-                <CardDescription>Verify your identity and opening cash balance</CardDescription>
+                <CardTitle className="text-2xl">Start Daily Session</CardTitle>
+                <CardDescription>Confirm your identity and opening balances</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-500">Agent</label>
+                    <label className="text-xs font-medium text-gray-500">Agent Name</label>
                     <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 flex items-center gap-3">
                       <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/30 rounded-md flex items-center justify-center">
                         <UserCheck className="h-4 w-4 text-blue-600" />
@@ -326,7 +453,7 @@ export default function WorkerPortal() {
                         </p>
                         <div className="flex items-center gap-2">
                           <p className="text-[10px] text-gray-400 font-mono">
-                            {user?.email}
+                            Account: {user?.email}
                           </p>
                           <Badge variant="outline" className="h-4 px-1 text-[8px] font-bold uppercase border-blue-100 text-blue-400">
                             {currentEmployee?.uniqueCode || "ID: PENDING"}
@@ -412,55 +539,55 @@ export default function WorkerPortal() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-8">
                   {/* Cash and float request */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="p-5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cash in Hand</span>
-                        <Wallet className="h-4 w-4 text-gray-400" />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="p-5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cash in Hand</span>
+                          <Wallet className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold text-gray-300">$</span>
+                          <input
+                            type="number"
+                            value={currentCash}
+                            onChange={e => setCurrentCash(e.target.value)}
+                            className="flex-1 bg-transparent text-4xl font-bold text-gray-900 dark:text-white outline-none placeholder:text-gray-200"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-gray-300">$</span>
-                        <input
-                          type="number"
-                          value={currentCash}
-                          onChange={e => setCurrentCash(e.target.value)}
-                          className="flex-1 bg-transparent text-4xl font-bold text-gray-900 dark:text-white outline-none placeholder:text-gray-200"
-                          placeholder="0.00"
-                        />
+
+                      <div className="grid grid-cols-1 sm:grid-rows-2 sm:grid-cols-1 gap-3">
+                        <button
+                          onClick={() => setShowFloatForm(true)}
+                          className="p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl flex items-center justify-between group hover:border-blue-300 transition-colors h-full"
+                        >
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">Quick Action</p>
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Request Float</h3>
+                          </div>
+                          <div className="h-10 w-10 bg-gray-50 dark:bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all text-gray-400">
+                            <Plus className="h-5 w-5" />
+                          </div>
+                        </button>
+                        
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl flex items-center justify-between h-full">
+                          <div>
+                            <p className="text-xs text-blue-600 font-medium mb-0.5">Total Commission Balance</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">${parseFloat(currentEmployee?.commissionBalance as any || "0").toFixed(2)}</p>
+                          </div>
+                          <Activity className="h-5 w-5 text-blue-500 opacity-50" />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-rows-2 gap-3">
-                      <button
-                        onClick={() => setShowFloatForm(true)}
-                        className="p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl flex items-center justify-between group hover:border-blue-300 transition-colors"
-                      >
-                        <div>
-                          <p className="text-xs text-gray-400 mb-0.5">Quick Action</p>
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-white">Request Float</h3>
-                        </div>
-                        <div className="h-10 w-10 bg-gray-50 dark:bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all text-gray-400">
-                          <Plus className="h-5 w-5" />
-                        </div>
-                      </button>
-                      
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-xl flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-blue-600 font-medium mb-0.5">Est. Commission (15%)</p>
-                          <p className="text-xl font-bold text-gray-900 dark:text-white">$12.42</p>
-                        </div>
-                        <Activity className="h-5 w-5 text-blue-500 opacity-50" />
+                    {/* Line balances */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Provider Balances</span>
+                        <div className="h-px flex-1 bg-gray-100 dark:bg-slate-700" />
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Line balances */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Provider Balances</span>
-                      <div className="h-px flex-1 bg-gray-100 dark:bg-slate-700" />
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-3">
+                      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                       {linesQuery.data?.map((line: any) => (
                         <div
                           key={line.id}
@@ -613,7 +740,7 @@ export default function WorkerPortal() {
 
                 <div className="p-4 border-t border-gray-100 dark:border-slate-700">
                   <Button
-                    onClick={handleCheckOut}
+                    onClick={() => setShowCheckoutDialog(true)}
                     variant="outline"
                     className="w-full h-11 rounded-lg border-red-200 text-red-600 hover:bg-red-50 font-medium text-sm"
                   >

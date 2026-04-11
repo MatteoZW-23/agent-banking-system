@@ -223,13 +223,24 @@ export class CommissionService {
 
     // 2. Track in Ledger (Prevention of 'stolen' money)
     if (totalCommission > 0) {
+      // Find the employee who performed this transaction
+      const txnRecord = await db.select({ employeeCode: transactions.employeeCode }).from(transactions).where(eq(transactions.id, transactionId as any)).limit(1);
+      const employeeCode = txnRecord[0]?.employeeCode;
+      
+      let empId = 1; // Fallback
+      if (employeeCode) {
+        const emp = await db.select({ id: employees.id }).from(employees).where(eq(employees.uniqueCode, employeeCode)).limit(1);
+        if (emp.length > 0) empId = emp[0].id;
+      }
+
       await db.insert(commissionLedger).values({
-        employeeId: 1, // Default system employee ID for centralized ledger conversion
+        employeeId: empId,
         providerId,
         amount: totalCommission.toString(),
         type: "earning",
         earnedAt: new Date(),
         payoutDate: this.calculatePayoutDate(structure.payoutFrequency).toISOString().split("T")[0],
+        status: structure.payoutFrequency === "instant" ? "cleared" : "pending"
       } as any);
     }
 

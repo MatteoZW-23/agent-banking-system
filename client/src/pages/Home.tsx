@@ -79,7 +79,7 @@ function FloatRequestAction({
 
   return (
     <div className="p-5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl space-y-4 hover:border-blue-300 transition-colors">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-semibold text-sm">
             {employee?.name?.[0] || "A"}
@@ -93,7 +93,7 @@ function FloatRequestAction({
             </span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
            <span className="text-xl font-bold text-gray-900 dark:text-white">
              ${request.amount}
            </span>
@@ -244,7 +244,7 @@ export default function Home() {
         />
 
         {/* KPI cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, i) => (
             <Card key={i} className="border border-gray-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">

@@ -56,6 +56,7 @@ import {
   Mail,
   Phone,
   AlertCircle,
+  Banknote,
 } from "lucide-react";
 import {
   Dialog,
@@ -160,6 +161,7 @@ export default function Nodes() {
   const [newLocation, setNewLocation] = useState("");
   const [newBranchId, setNewBranchId] = useState("");
   const [newRole, setNewRole] = useState("agent");
+  const [newStartingCapital, setNewStartingCapital] = useState("");
   const [activeServices, setActiveServices] = useState<Record<number, string>>({});
   const [tempCredentials, setTempCredentials] = useState<{ email: string; pass: string } | null>(null);
 
@@ -231,11 +233,12 @@ export default function Nodes() {
         location: newLocation,
         branchId: parseInt(newBranchId),
         role: newRole as any,
+        startingCapital: parseFloat(newStartingCapital || "0"),
       });
 
       if (result.tempPassword) {
         setTempCredentials({ 
-          email: newEmail, 
+          email: result.email || result.uniqueCode, 
           pass: (result as any).tempPassword 
         });
       }
@@ -259,6 +262,7 @@ export default function Nodes() {
       setNewLocation("");
       setNewBranchId("");
       setNewRole("agent");
+      setNewStartingCapital("");
       setActiveServices({});
       
       if (!(result as any).tempPassword) {
@@ -342,28 +346,57 @@ export default function Nodes() {
                         <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">Credentials generated for employee</p>
                       </div>
 
-                      <div className="space-y-3">
-                        <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800">
-                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Email Address</p>
-                          <p className="text-sm font-mono font-medium">{tempCredentials.email}</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Initial Working Capital</Label>
+                          <Badge variant="outline" className="h-4 border-amber-200 bg-amber-50 text-amber-600 text-[8px] font-mono leading-none">MANDATORY FUNDING</Badge>
                         </div>
-                        <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                          <div>
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Temporary Password</p>
-                            <p className="text-lg font-mono font-bold text-blue-600 tracking-widest">{tempCredentials.pass}</p>
+                        <div className="relative group">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                             <Banknote className="h-4 w-4 text-emerald-500" />
+                             <span className="text-lg font-bold text-gray-300">$</span>
                           </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              navigator.clipboard.writeText(tempCredentials.pass);
-                              toast.success("Password copied");
-                            }}
-                            className="h-8 w-8 p-0"
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={newStartingCapital}
+                            onChange={(e) => setNewStartingCapital(e.target.value)}
+                            className="h-14 pl-14 text-xl font-bold bg-amber-50/30 border-amber-200 focus:border-emerald-500 focus:ring-emerald-500/20 text-gray-900 rounded-xl transition-all"
+                          />
                         </div>
+                        <p className="text-[10px] text-gray-400 italic">This sets the agent's baseline expected balance. Discrepancy alerts will trigger relative to this amount.</p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 transition-all hover:border-blue-200">
+                             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1.5 flex items-center gap-1.5">
+                               <Fingerprint className="h-3 w-3" /> Staff ID / Login
+                             </p>
+                             <p className="text-sm font-mono font-bold text-gray-900 dark:text-white uppercase">
+                               {tempCredentials.email}
+                             </p>
+                          </div>
+                          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20 transition-all hover:bg-blue-100/50">
+                             <p className="text-[10px] text-blue-500 uppercase font-bold tracking-widest mb-1.5 flex items-center gap-1.5">
+                               <Lock className="h-3 w-3" /> Temp Password
+                             </p>
+                             <p className="text-lg font-mono font-black text-blue-600 tracking-widest uppercase">
+                               {tempCredentials.pass}
+                             </p>
+                          </div>
+                        </div>
+
+                        <Button 
+                          variant="outline" 
+                          className="w-full h-10 rounded-lg border-gray-200 text-xs font-semibold flex items-center justify-center gap-2"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`Login: ${tempCredentials.email}\nPass: ${tempCredentials.pass}`);
+                            toast.success("Credentials copied for sharing!");
+                          }}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" /> Copy Enrollment Data
+                        </Button>
                       </div>
 
                       <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-lg flex gap-3">
@@ -549,7 +582,7 @@ export default function Nodes() {
           }}
         />
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           {[
             { label: "Total Staff", value: employees.length.toString(), icon: Users2, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
             { label: "Active Lines", value: "0", icon: Smartphone, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },

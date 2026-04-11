@@ -30,7 +30,7 @@ export const nodesRouter = router({
   createEmployee: supervisorProcedure
     .input(
       z.object({
-        uniqueCode: z.string(),
+        uniqueCode: z.string().optional(),
         name: z.string(),
         email: z.string().email().optional().or(z.literal("")),
         phone: z.string().optional(),

@@ -32,6 +32,7 @@ import {
   getUserByOpenId,
   getEmployeeByEmail,
   setUserPassword,
+  getEmployeeByCode,
 } from "./db";
 import { reconciliationEngine } from "./services/reconciliation";
 import { transactionAnalysisService } from "./services/transactionAnalysis";
@@ -45,7 +46,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { invokeLLM } from "./_core/llm";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { floatRequests, users } from "../drizzle/schema";
+import { floatRequests, users, branches } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { sdk } from "./_core/sdk";
 import { upsertUser } from "./db";
@@ -106,6 +107,17 @@ export const appRouter = router({
         let userRec = null;
         try {
           userRec = await getUserByEmail(normalizedInputEmail);
+          
+          // Fallback: If no user found by email, check if input was a Staff ID
+          if (!userRec) {
+            const employee = await getEmployeeByCode(input.email.toUpperCase());
+            if (employee && employee.email) {
+              userRec = await getUserByEmail(employee.email);
+            } else if (employee) {
+              // Handle case where employee has placeholder email (staffid@agent.co.zw)
+              userRec = await getUserByEmail(`${employee.uniqueCode.toLowerCase()}@agent.co.zw`);
+            }
+          }
         } catch (err) {
           console.warn("[Auth] Users table unreachable");
           if (isMasterCredentials) {
@@ -331,6 +343,7 @@ export const appRouter = router({
           location: z.string().optional(),
           branchId: z.number(),
           role: z.enum(["agent", "supervisor", "manager"]).default("agent"),
+          startingCapital: z.number().optional().default(0),
         })
       )
       .mutation(async ({ input }) => {
@@ -338,6 +351,7 @@ export const appRouter = router({
         console.log(`[ONBOARDING] New employee registered: ${input.name} (${employee?.uniqueCode})`);
         return employee;
       }),
+
     updateEmployee: supervisorProcedure
       .input(
         z.object({
@@ -506,6 +520,12 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
         return await getLatestBalanceSnapshot(input.employeeId);
+      }),
+
+    listBranches: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        return db ? await db.select().from(branches) : [];
       }),
   }),
 

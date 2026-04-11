@@ -138,10 +138,10 @@ export class ReconciliationEngine {
     const summary = this.calculateReconciliationSummary(internalTxns, externalTotal);
 
     const reconNotes = summary.isNetMatched 
-      ? `Verified 85% Net Settlement. 15% ($${(summary.internalTotal * 0.15).toFixed(2)}) reserved for Agent Salaries.`
+      ? `Verified 85% Net Settlement. 15% ($${(summary.internalTotal * 0.15).toFixed(2)}) reserved for Agent Commissions.`
       : summary.isGrossMatched 
         ? "Gross 100% Settlement Matched." 
-        : `Discrepancy: $${summary.discrepancy.toFixed(2)}`;
+        : `Unreconciled Variance: $${summary.discrepancy.toFixed(2)}`;
 
     const report: ReconciliationReport = {
       date: date.toISOString().split("T")[0],
@@ -241,10 +241,9 @@ export class ReconciliationEngine {
         }).where(eq(transactions.id, internalTxn.id));
 
         await db.update(commissionLedger).set({ 
-          status: "cleared",
-          amount: isSettlementMatch ? (expectedCommissionCents / 100).toString() : undefined, // Pulse correction
-          clearedAt: new Date(),
-          notes: `Cleared via Zero-Cent-Loss Recon. Split: ${isSettlementMatch ? '85/15 Net' : '100% Gross'}`
+          payoutReference: `REC_${internalTxn.id}`,
+          amount: isSettlementMatch ? (expectedCommissionCents / 100).toString() : undefined,
+          notes: `Verified via Session Reconciliation. Split: ${isSettlementMatch ? '85/15 Net' : '100% Gross'}`
         } as any).where(and(eq(commissionLedger.transactionId, internalTxn.id), eq(commissionLedger.status, "pending")));
       } else {
         mismatched++;

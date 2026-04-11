@@ -258,6 +258,8 @@ export async function createEmployee(data: any) {
     ...data,
     uniqueCode: staffId,
     status: "active",
+    startingCapital: data.startingCapital ? data.startingCapital.toString() : "0.00",
+    commissionBalance: "0.00",
   };
 
   const db = await getDb();
@@ -267,21 +269,23 @@ export async function createEmployee(data: any) {
   const [result] = await db.insert(employees).values(employeeData).returning({ id: employees.id });
   
   // 2. Create User for Login
-  if (data.email) {
-    try {
-      await upsertUser({
-        openId: `usr-${data.role}-${data.email.toLowerCase()}`,
-        name: data.name,
-        email: data.email.toLowerCase(),
-        role: data.role as any,
-        password: tempPassword,
-        mustChangePassword: true,
-        lastSignedIn: new Date(),
-      });
-      console.log(`[Auth] User created for ${data.email} with temp password: ${tempPassword}`);
-    } catch (err) {
-      console.error("[Auth] Failed to create user for employee:", err);
-    }
+  const loginEmail = data.email?.trim() 
+    ? data.email.toLowerCase() 
+    : `${staffId.toLowerCase()}@agent.co.zw`;
+
+  try {
+    await upsertUser({
+      openId: `usr-${data.role}-${staffId.toLowerCase()}`,
+      name: data.name,
+      email: loginEmail,
+      role: data.role as any,
+      password: tempPassword,
+      mustChangePassword: true,
+      lastSignedIn: new Date(),
+    });
+    console.log(`[Auth] User profile secured for ${data.name} (ID: ${staffId})`);
+  } catch (err) {
+    console.error("[Auth] Enrollment security failure:", err);
   }
   
   return { id: result.id, ...employeeData, tempPassword };
@@ -317,21 +321,126 @@ export async function getEmployeeRegistrations(employeeId: number) {
     .where(eq(agentRegistrations.employeeId, employeeId));
 }
 
+/**
+ * Shared logic to escalate balance anomalies to management
+ */
+async function triggerDiscrepancyAlert(employeeId: number, amount: number, expected: number, actual: number, context: 'Opening' | 'Closing') {
+  if (Math.abs(amount) < 5) return;
+  
+  const db = await getDb();
+  if (!db) return;
+
+  const { alertService } = await import("./services/alertService");
+  const emp = await db.select().from(employees).where(eq(employees.id, employeeId)).limit(1);
+  const name = emp?.[0]?.name || `ID:${employeeId}`;
+  
+  let severity: "medium" | "high" | "critical" = "medium";
+  if (amount < -10) severity = "critical";
+  else if (Math.abs(amount) > 50) severity = "critical";
+  else if (Math.abs(amount) > 10) severity = "high";
+
+  await alertService.triggerAlert(
+    "discrepancy",
+    null,
+    null,
+    `Significant ${context} Variance`,
+    `Agent ${name} reported a $${amount.toFixed(2)} variance at session ${context.toLowerCase()}. Expected: $${expected.toFixed(2)}, Reported: $${actual.toFixed(2)}.`,
+    severity
+  );
+}
+
 export async function createCheckIn(data: any) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(checkIns).values(data).returning({ id: checkIns.id });
-  return { id: result.id, ...data };
+
+  // 1. Resolve Expected Balance (Last Checkout)
+  const lastCheckIn = await getLatestCheckIn(data.employeeId);
+  const expectedCash = lastCheckIn?.closingCash ? parseFloat(lastCheckIn.closingCash as any) : 0;
+  
+  // 2. Calculate Discrepancy
+  const actualCash = data.openingCash || 0;
+  const discrepancyAmount = actualCash - expectedCash;
+  const status = Math.abs(discrepancyAmount) > 0.01 ? 'discrepancy' : 'verified';
+
+  const checkInData = {
+    ...data,
+    discrepancyAmount: discrepancyAmount.toString(),
+    status
+  };
+
+  const [result] = await db.insert(checkIns).values(checkInData).returning({ id: checkIns.id });
+
+  // 3. Trigger Alert if significant
+  await triggerDiscrepancyAlert(data.employeeId, discrepancyAmount, expectedCash, actualCash, 'Opening');
+
+  return { id: result.id, ...checkInData };
 }
 
 export async function checkoutEmployee(checkInId: number, closingData: any) {
   const db = await getDb();
   if (!db) return null;
+
+  // 1. Get CheckIn info
+  const checkIn = await db.select().from(checkIns).where(eq(checkIns.id, checkInId)).limit(1);
+  if (checkIn.length === 0) return null;
+
+  // 2. Resolve Employee & Fiscal Context
+  const emp = await db.select().from(employees).where(eq(employees.id, checkIn[0].employeeId)).limit(1);
+  if (emp.length === 0) return null;
+
+  const initialCapital = parseFloat(emp[0].startingCapital as any || "0");
+  
+  // 3. Dynamic Commission Integrity Check
+  // We calculate commission for the duration of this shift
+  const { commissionService } = await import("./services/commissionService");
+  const shiftCommission = await commissionService.calculateEmployeeCommission(
+    emp[0].uniqueCode,
+    checkIn[0].checkInTime,
+    new Date()
+  );
+
+  const earningsAccrued = shiftCommission.totalCommission || 0;
+  const expectedTotalValue = initialCapital + earningsAccrued;
+  
+  // 4. Calculate Reporting Discrepancy
+  // Reported Value = Reported Cash + Sum(Reported Line Balances)
+  const actualCash = closingData.closingCash || 0;
+  const actualLineTotal = Object.values(closingData.closingLineBalances || {}).reduce((s: number, v: any) => s + parseFloat(v || "0"), 0);
+  const totalReportedValue = actualCash + actualLineTotal;
+  
+  const discrepancy = totalReportedValue - expectedTotalValue;
+  const status = Math.abs(discrepancy) > 2 ? 'discrepancy' : 'verified';
+
   await db
     .update(checkIns)
-    .set({ ...closingData, checkOutTime: new Date() })
+    .set({ 
+      ...closingData, 
+      checkOutTime: new Date(),
+      discrepancyAmount: discrepancy.toString(),
+      status
+    })
     .where(eq(checkIns.id, checkInId));
-  return { id: checkInId, ...closingData };
+
+  // 5. Update Employee's Permanent Commission Balance
+  const currentComm = parseFloat(emp[0].commissionBalance as any || "0");
+  await db.update(employees)
+    .set({ 
+       commissionBalance: (currentComm + earningsAccrued).toString(),
+       updatedAt: new Date()
+    })
+    .where(eq(employees.id, emp[0].id));
+
+  // 6. Security Protocol: Centralized Escalation
+  await triggerDiscrepancyAlert(emp[0].id, discrepancy, expectedTotalValue, totalReportedValue, 'Closing');
+
+  return { 
+    id: checkInId, 
+    ...closingData, 
+    status, 
+    discrepancyAmount: discrepancy,
+    earningsAccrued,
+    expectedTotalValue
+  };
 }
 
 export async function getLatestCheckIn(employeeId: number) {
