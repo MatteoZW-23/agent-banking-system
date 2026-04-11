@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Linkedin, ExternalLink, ShieldCheck, Cpu, Code2, Globe } from "lucide-react";
+import { Linkedin, ExternalLink, ShieldCheck, Cpu, Code2, Globe, Zap } from "lucide-react";
 
 export function DeveloperCreditsModal({ 
   isOpen, 
@@ -65,6 +65,29 @@ export function DeveloperCreditsModal({
           </div>
 
           <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-emerald-500 uppercase tracking-widest flex items-center gap-2 text-center justify-center py-2 border-y border-white/5">
+              <ShieldCheck className="h-4 w-4" /> Technical Mastery Deck
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+               {[
+                 { label: "Systems Architecture", icon: Cpu, color: "text-blue-400", bg: "bg-blue-500/10" },
+                 { label: "Financial Engineering", icon: DollarSign, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                 { label: "Security Logic", icon: ShieldCheck, color: "text-orange-400", bg: "bg-orange-500/10" },
+                 { label: "Frontend Excellence", icon: Globe, color: "text-purple-400", bg: "bg-purple-500/10" },
+               ].map((skill, i) => (
+                 <div key={i} className={`p-4 rounded-2xl border border-white/5 ${skill.bg} flex flex-col items-center text-center gap-3 group hover:scale-105 transition-all`}>
+                    <div className={`p-2.5 rounded-xl bg-black/40 ${skill.color}`}>
+                       <skill.icon className="h-5 w-5" />
+                    </div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-tight text-white leading-tight">
+                       {skill.label}
+                    </p>
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
             <h4 className="text-sm font-semibold text-amber-500 uppercase tracking-widest flex items-center gap-2">
               <Zap className="h-4 w-4" /> Core Innovations
             </h4>
@@ -82,65 +105,55 @@ export function DeveloperCreditsModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-2 group hover:bg-slate-900 transition-colors">
-                <div className="flex items-center gap-2 text-emerald-400">
-                   <ShieldCheck className="h-4 w-4" />
-                   <span className="text-[10px] font-bold uppercase tracking-wider">Infrastructure Mastery</span>
-                </div>
-                <p className="text-xs text-slate-400">Expert in secure financial orchestration and Zimbabwean network topology.</p>
-             </div>
-             <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-2 group hover:bg-slate-900 transition-colors">
-                <div className="flex items-center gap-2 text-blue-400">
-                   <Cpu className="h-4 w-4" />
-                   <span className="text-[10px] font-bold uppercase tracking-wider">Logic Architecture</span>
-                </div>
-                <p className="text-xs text-slate-400">Deep expertise in multi-provider distribution and real-time ledger synchronization.</p>
-             </div>
-          </div>
-
-          <div className="pt-6 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-             <div className="flex items-center gap-6">
+          <div className="pt-8 border-t border-slate-800 space-y-6">
+             <h4 className="text-sm font-semibold text-blue-400 uppercase tracking-widest flex items-center gap-2">
+               <Globe className="h-4 w-4" /> Professional Portals
+             </h4>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <a 
                    href="https://www.linkedin.com/in/mathew-mabira-24861632b" 
                    target="_blank" 
                    rel="noopener noreferrer"
-                   className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors group"
+                   className="flex items-center gap-4 p-4 rounded-2xl bg-blue-600/5 border border-blue-500/20 hover:bg-blue-600/10 hover:border-blue-500/40 transition-all group"
                 >
-                   <div className="h-10 w-10 rounded-xl bg-blue-600/10 flex items-center justify-center group-hover:bg-blue-600 transition-all">
-                      <Linkedin className="h-5 w-5 text-blue-500 group-hover:text-white" />
+                   <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                      <Linkedin className="h-6 w-6 text-white" />
                    </div>
-                   <div>
-                      <p className="text-xs font-bold leading-none">Mathew Mabira</p>
-                      <p className="text-[10px] text-slate-500 mt-1">Professional LinkedIn</p>
+                   <div className="flex-1">
+                      <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Mathew Mabira</p>
+                      <p className="text-[11px] text-slate-400">Professional LinkedIn</p>
                    </div>
+                   <ExternalLink className="h-4 w-4 text-slate-600 group-hover:text-white transition-colors" />
                 </a>
 
                 <a 
                    href="https://github.com/sammy2324mathy" 
                    target="_blank" 
                    rel="noopener noreferrer"
-                   className="flex items-center gap-2.5 text-slate-400 hover:text-white transition-colors group"
+                   className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
                 >
-                   <div className="h-10 w-10 rounded-xl bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-all border border-slate-700">
-                      <Globe className="h-5 w-5 text-slate-400 group-hover:text-white" />
+                   <div className="h-12 w-12 rounded-xl bg-slate-800 flex items-center justify-center shadow-lg border border-slate-700">
+                      <Code2 className="h-6 w-6 text-white" />
                    </div>
-                   <div>
-                      <p className="text-xs font-bold leading-none">Open Source Portfolio</p>
-                      <p className="text-[10px] text-slate-500 mt-1">GitHub Projects</p>
+                   <div className="flex-1">
+                      <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">Open Source</p>
+                      <p className="text-[11px] text-slate-400">GitHub Portfolio</p>
                    </div>
+                   <ExternalLink className="h-4 w-4 text-slate-600 group-hover:text-white transition-colors" />
                 </a>
              </div>
+             
              <Button 
                 onClick={() => window.open("https://www.linkedin.com/in/mathew-mabira-24861632b", "_blank")}
-                className="w-full md:w-auto px-8 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20"
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-extrabold text-base transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-blue-900/40 border border-blue-400/20"
              >
                 Connect on LinkedIn
              </Button>
           </div>
           
           <div className="pb-4 text-center">
-             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.4em] opacity-50">
+             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.4em] opacity-40">
                 Limitless Junction Track · Engineering Excellence by Mathew Mabira
              </p>
           </div>
